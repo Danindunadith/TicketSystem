@@ -1,0 +1,42 @@
+.bg-picture{
+    background-image: url('bg.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    height: 100vh;
+    position: relative;
+}
+
+
+  /* Input fields */
+  input {
+    padding: 0px;
+    font-size: 1rem;
+    margin: 10px;
+  }
+  
+  /* Input placeholder color */
+  input::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+  }
+  
+  /* Form container */
+  .backdrop-blur-xl {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  /* Register button */
+  button {
+    transition: background 0.3s ease;
+  }
+  
+  button:hover {
+    background: #e0a126;
+  }
+  

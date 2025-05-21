@@ -1,0 +1,11 @@
+.inputRow {
+    display: flex;
+    gap: 20px; /* Adjust spacing between fields */
+    align-items: center; /* Align items vertically */
+    margin-bottom: 15px; /* Spacing between rows */
+}
+
+.inputRow .inputGroup {
+    flex: 1; /* Make both inputs take equal space */
+    min-width: 200px; /* Prevent excessive shrinking */
+}

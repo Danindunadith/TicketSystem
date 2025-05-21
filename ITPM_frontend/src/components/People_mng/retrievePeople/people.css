@@ -1,0 +1,132 @@
+/* Container Styling */
+.PeopleTable {
+    width: 90%;
+    max-width: 1200px;
+    margin: 50px auto;
+    padding: 20px;
+    background: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+/* Add New User Button */
+.addButton {
+    display: inline-block;
+    background: #007bff;
+    color: white;
+    padding: 10px 15px;
+    font-size: 14px;
+    font-weight: bold;
+    text-decoration: none;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    transition: 0.3s;
+}
+
+.addButton:hover {
+    background: #0056b3;
+}
+
+/* Page Title */
+.PeopleTable h3 {
+    margin-bottom: 15px;
+    font-size: 24px;
+    color: #333;
+}
+
+/* Search Bar */
+.PeopleTable input {
+    width: 50%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 14px;
+    outline: none;
+    transition: border 0.3s ease-in-out;
+    margin-bottom: 20px;
+}
+
+.PeopleTable input:focus {
+    border-color: #007bff;
+}
+
+/* Table Styling */
+.tableclass table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.tableclass th, .tableclass td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+.tableclass th {
+    background: #007bff;
+    color: white;
+    text-transform: uppercase;
+    font-size: 14px;
+}
+
+.tableclass tbody tr:nth-child(even) {
+    background: #f9f9f9;
+}
+
+/* Hover Effect on Rows */
+.tableclass tbody tr:hover {
+    background: #f1f1f1;
+}
+
+/* Action Buttons (Edit & Delete) */
+.actionButtons a, 
+.actionButtons button {
+    background: #28a745;
+    color: white;
+    padding: 5px 10px;
+    font-size: 14px;
+    border-radius: 5px;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.actionButtons button {
+    background: #dc3545;
+    margin-left: 5px;
+}
+
+.actionButtons a:hover {
+    background: #218838;
+}
+
+.actionButtons button:hover {
+    background: #c82333;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .PeopleTable {
+        width: 95%;
+    }
+    
+    .PeopleTable input {
+        width: 100%;
+    }
+
+    .tableclass th, .tableclass td {
+        font-size: 12px;
+        padding: 8px;
+    }
+
+    .actionButtons a, .actionButtons button {
+        font-size: 12px;
+        padding: 4px 8px;
+    }
+}
