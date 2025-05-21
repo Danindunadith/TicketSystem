@@ -10,6 +10,7 @@ import inquiryRouter from "./routes/inquiryRouter.js";
 import peopleRoute from "./routes/peopleRoute.js";
 import employeeRoute from "./routes/employeeRoute.js";
 import StockRoute from "./routes/StockRoute.js";
+import ticketRoute from "./routes/ticketRoute.js";   //ticket
 
 
 import cors from "cors";
@@ -57,7 +58,7 @@ app.use("/api/inquiries",inquiryRouter);
 app.use("/api/peoples",peopleRoute);
 app.use("/api/employee",employeeRoute);
 app.use("/api/stock",StockRoute);
-
+app.use("/api/tickets",ticketRoute);   //ticket
 
 //testuser@example.com -customer
 //testadmin@example.com-admin
