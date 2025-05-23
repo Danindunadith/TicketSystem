@@ -69,7 +69,7 @@ export default function AllTicketsPage() {
               >
                 <div className="p-6">
                   <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                    Ticket #{ticket.ticketid}: {ticket.subject}
+                    Ticket: {ticket.subject}
                   </h3>
                   <p className="text-sm text-gray-600 mb-1">
                     <span className="font-medium">Name:</span> {ticket.name}

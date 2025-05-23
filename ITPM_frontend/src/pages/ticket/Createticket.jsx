@@ -12,17 +12,17 @@ export default function CreateTicketPage() {
     department: "",
     relatedservice: "",
     priority: "",
-    attachment: "",
+    attachment: null, // Changed to store file object
     statement: ""
   });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, files } = e.target;
     setFormData({
       ...formData,
-      [name]: value
+      [name]: files ? files[0] : value // Store file object for attachment
     });
   };
 
@@ -34,16 +34,23 @@ export default function CreateTicketPage() {
     console.log("Sending POST request to:", apiUrl); // Debug log to verify URL
 
     try {
-      const response = await axios.post(apiUrl, {
-        name: formData.name,
-        email: formData.email,
-        date: formData.date,
-        subject: formData.subject,
-        department: formData.department,
-        relatedservice: formData.relatedservice,
-        priority: formData.priority,
-        attachment: formData.attachment,
-        statement: formData.statement
+      const formDataToSend = new FormData();
+      formDataToSend.append("name", formData.name);
+      formDataToSend.append("email", formData.email);
+      formDataToSend.append("date", formData.date);
+      formDataToSend.append("subject", formData.subject);
+      formDataToSend.append("department", formData.department);
+      formDataToSend.append("relatedservice", formData.relatedservice);
+      formDataToSend.append("priority", formData.priority);
+      if (formData.attachment) {
+        formDataToSend.append("attachment", formData.attachment); // Append file
+      }
+      formDataToSend.append("statement", formData.statement);
+
+      const response = await axios.post(apiUrl, formDataToSend, {
+        headers: {
+          "Content-Type": "multipart/form-data"
+        }
       });
       toast.success("Ticket created successfully!");
       navigate("/tickets");
@@ -201,12 +208,11 @@ export default function CreateTicketPage() {
                 Attachment (Optional)
               </label>
               <input
-                type="text"
+                type="file"
                 id="attachment"
                 name="attachment"
-                placeholder="Enter attachment URL or leave blank"
+                accept="image/*,.pdf"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={formData.attachment}
                 onChange={handleChange}
               />
             </div>
