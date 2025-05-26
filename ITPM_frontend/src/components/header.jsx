@@ -61,25 +61,19 @@ export default function Header() {
           >
             EVENT
           </Link>
+
+          <Link 
+            to="/createticket" 
+            className="text-[22px] font-bold py-2 px-4 rounded-lg hover:bg-blue-100 transition-colors duration-300 flex items-center"
+          >
+            Raise Ticket
+          </Link>
+
+
         </nav>
 
         <div className="absolute right-5 flex items-center space-x-4">
-          <div className="relative w-65 hidden md:block">
-            <input 
-              type="text" 
-              placeholder="Search... " 
-              className="w-full py-2 pl-4 pr-10 rounded-full text-sm border border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
-            />
-            <svg 
-              className="w-7 h-7 absolute right-6 top-3.5 text-blue-400" 
-              xmlns="http://www.w3.org/2000/svg" 
-              fill="none" 
-              viewBox="0 0 24 24" 
-              stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </div>
+          
 
           <div className="auth-buttons">
             {!isAuthenticated ? (
