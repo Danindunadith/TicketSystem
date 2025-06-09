@@ -5,20 +5,20 @@ import { MdEventAvailable, MdOutlineLocalMovies, MdMusicNote, MdSportsSoccer } f
 export default function Dashboard() {
   const [selectedPeriod, setSelectedPeriod] = useState('weekly');
   
-  // Sample data - would come from your backend in a real app
+  
   const stats = [
-    { title: 'Total Bookings', value: '12,843', icon: <FaTicketAlt />, change: '+18%', color: 'bg-blue-500' },
-    { title: 'Revenue', value: '$58,492', icon: <FaChartLine />, change: '+24%', color: 'bg-green-500' },
-    { title: 'Active Users', value: '2,420', icon: <FaUsers />, change: '+12%', color: 'bg-purple-500' },
-    { title: 'Upcoming Events', value: '48', icon: <FaRegCalendarAlt />, change: '+8%', color: 'bg-amber-500' },
+    { title: 'Total Tickets', value: '9', icon: <FaTicketAlt />, change: '+18%', color: 'bg-blue-500' },
+    { title: 'Users', value: '10', icon: <FaChartLine />, change: '', color: 'bg-green-500' },
+    { title: 'Active Admins', value: '6', icon: <FaUsers />, change: '', color: 'bg-purple-500' },
+    
   ];
   
   const recentBookings = [
-    { id: 'TK-7829', customer: 'Emma Johnson', event: 'Summer Music Festival', date: 'Mar 18, 2025', amount: '$89.00', status: 'Confirmed' },
-    { id: 'TK-7830', customer: 'James Wilson', event: 'NBA Finals Game 3', date: 'Mar 25, 2025', amount: '$120.00', status: 'Pending' },
-    { id: 'TK-7831', customer: 'Sophia Chen', event: 'Hamilton Musical', date: 'Mar 30, 2025', amount: '$175.00', status: 'Confirmed' },
-    { id: 'TK-7832', customer: 'Miguel Rodriguez', event: 'Tech Conference 2025', date: 'Apr 05, 2025', amount: '$210.00', status: 'Confirmed' },
-    { id: 'TK-7833', customer: 'Sarah Ahmed', event: 'Comedy Night Special', date: 'Apr 10, 2025', amount: '$45.00', status: 'Refunded' },
+    { id: '#7B1A52', customer: 'MALA', event: 'Login Issue', date: 'May 21, 2025', amount: '$89.00', status: 'High' },
+    { id: '#E6491B', customer: 'Nilmini Nanayakkara', event: 'Cant verify email address', date: 'May 24, 2025', amount: '$120.00', status: 'Medium' },
+    { id: '#E64927', customer: 'Danindu nadith', event: 'Cant verify email address', date: 'May 25, 2025', amount: '$175.00', status: 'High' },
+    { id: '#E64941', customer: 'Danindu Hewapathirana', event: 'Cant verify email address', date: 'May 22, 2025', amount: '$210.00', status: 'Low' },
+    { id: '#E64947', customer: 'Pasindu withana', event: 'Cant verify email address', date: 'May 25, 2025', amount: '$45.00', status: 'Medium' },
   ];
   
   const popularEvents = [
@@ -43,7 +43,7 @@ export default function Dashboard() {
               <div>
                 <p className="text-gray-500 text-sm font-medium">{stat.title}</p>
                 <h3 className="text-2xl font-bold text-gray-800 mt-1">{stat.value}</h3>
-                <span className="inline-block mt-2 text-sm font-medium text-green-600">{stat.change} since last month</span>
+                <span className="inline-block mt-2 text-sm font-medium text-green-600">{stat.change} </span>
               </div>
               <div className={`${stat.color} text-white p-3 rounded-lg`}>
                 {stat.icon}
@@ -85,7 +85,7 @@ export default function Dashboard() {
         
         {/* Popular Events */}
         <div className="bg-white rounded-xl shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">Top Selling Events</h2>
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">Popular concerns</h2>
           <div className="space-y-4">
             {popularEvents.map((event, index) => (
               <div key={index} className="flex items-center p-3 rounded-lg hover:bg-gray-50 transition-colors">
@@ -137,7 +137,7 @@ export default function Dashboard() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
               </tr>
@@ -149,7 +149,7 @@ export default function Dashboard() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{booking.customer}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{booking.event}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{booking.date}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">{booking.amount}</td>
+                  
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
                       booking.status === 'Confirmed' ? 'bg-green-100 text-green-800' : 

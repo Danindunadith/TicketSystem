@@ -27,8 +27,15 @@ export default function OneTicketPage() {
   }, [id]);
 
   const handleBack = () => {
-    navigate("/tickets");
+    navigate("/admin/tickets");
   };
+
+  //handle reply
+  const handleReply = () => {
+    navigate("/admin/users");
+  };
+
+
 
   // Function to check if the attachment is an image
   const isImage = (url) => {
@@ -214,6 +221,16 @@ export default function OneTicketPage() {
               >
                 Back to Tickets
               </button>
+              
+
+              <button 
+    onClick={() => navigate('/admin/tickets/reply', {state: ticket})}
+    className="mt-6 w-full bg-green-500 text-white py-3 px-4 rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
+>
+    Reply to ticket
+</button>
+
+
             </div>
           </div>
         )}

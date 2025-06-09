@@ -53,7 +53,7 @@ export default function CreateTicketPage() {
         }
       });
       toast.success("Ticket created successfully!");
-      navigate("/tickets");
+      navigate("/");
     } catch (err) {
       console.error("Error details:", err.response);
       toast.error(err?.response?.data?.message || "An error occurred while creating the ticket");
@@ -93,7 +93,7 @@ export default function CreateTicketPage() {
             </div>
             <nav className="flex space-x-4">
               <button
-                onClick={() => navigate("/tickets")}
+                onClick={() => navigate("/")}
                 className="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium flex items-center"
               >
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

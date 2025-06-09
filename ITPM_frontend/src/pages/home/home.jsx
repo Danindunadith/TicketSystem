@@ -1,8 +1,14 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { BookOpen, CheckCircle, Clock, Shield, Star, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { BookOpen, CheckCircle, Clock, Shield, Star, ArrowRight, Menu, X } from 'lucide-react';
 
 export default function Home() {
+  const [isVisible, setIsVisible] = useState(false);
+  const [activeCard, setActiveCard] = useState(null);
+
+  useEffect(() => {
+    setIsVisible(true);
+  }, []);
+
   const services = [
     {
       title: "Assignment Writing",
@@ -31,63 +37,91 @@ export default function Home() {
       title: "Exceptional Service!",
       text: "Assignoz Consultancy delivered my essay ahead of schedule with impeccable quality. I couldn't be happier with the outcome!",
       author: "- Kamal Jayasuriya",
-      rating: 4
+      rating: 5
     },
     {
       title: "Highly Recommended!",
       text: "The team provided a well-researched, plagiarism-free thesis that exceeded my expectations. Their timely delivery and customer support are fantastic.",
       author: "- Mariel Kalugama", 
-      rating: 4
+      rating: 5
+    }
+  ];
+
+  const features = [
+    {
+      icon: BookOpen,
+      title: "Expert Writers & Wide Subject Coverage",
+      description: "Our highly qualified professionals specialize in various academic fields, covering subjects from humanities to sciences."
+    },
+    {
+      icon: CheckCircle,
+      title: "100% Plagiarism-Free & Well-Researched Content",
+      description: "We guarantee original, properly cited, and thoroughly researched academic work."
+    },
+    {
+      icon: Clock,
+      title: "Timely Delivery & Customized Solutions",
+      description: "We meet deadlines, even for urgent assignments, while tailoring content to your specific academic needs."
+    },
+    {
+      icon: Shield,
+      title: "Confidential & 24/7 Support",
+      description: "Your privacy is completely secure, and our support team is available anytime to assist you."
     }
   ];
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white overflow-x-hidden">
       {/* Hero Section */}
-      <div className="relative text-white overflow-hidden min-h-[600px] flex items-center">
-        {/* Background Image */}
+      <div className="relative text-white overflow-hidden min-h-screen flex items-center">
+        {/* Background Image with Parallax Effect */}
         <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat transform scale-110 transition-transform duration-1000"
           style={{
             backgroundImage: `url('https://static.india.com/wp-content/uploads/2024/03/JEE-MAIN-Session-2.jpg?impolicy=Medium_Widthonly&w=400')`
           }}
         ></div>
-        {/* Dark overlay for text readability */}
-        <div className="absolute inset-0 bg-black bg-opacity-50"></div>
         
-        <div className="container mx-auto px-4 py-20 md:py-32 relative z-10">
-          <div className="max-w-5xl mx-auto text-center">
-            <h1 className="text-4xl md:text-6xl font-bold mb-8 leading-tight">
+        {/* Enhanced Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/50 to-transparent"></div>
+        
+        {/* Floating Elements */}
+        <div className="absolute top-20 right-20 w-32 h-32 bg-white/10 rounded-full animate-pulse"></div>
+        <div className="absolute bottom-20 left-20 w-24 h-24 bg-white/10 rounded-full animate-bounce"></div>
+        <div className="absolute top-1/2 right-10 w-4 h-4 bg-white/30 rounded-full animate-ping"></div>
+        
+        <div className="container mx-auto px-4 py-20 relative z-10">
+          <div className={`max-w-6xl mx-auto text-center transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
+            <h1 className="text-5xl md:text-7xl font-bold mb-8 leading-tight bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent">
               Expert Academic Writing<br />
-              to Help You Succeed!
+              <span className="text-orange-300">to Help You Succeed!</span>
             </h1>
-            <p className="text-xl md:text-2xl text-orange-100 mb-12 max-w-4xl mx-auto leading-relaxed">
+            <p className="text-xl md:text-2xl text-gray-200 mb-12 max-w-4xl mx-auto leading-relaxed">
               At Assignoz Consultancy, we provide top-quality academic writing services, ensuring 100% originality, 
               plagiarism-free content, and timely delivery to help you achieve academic success with confidence.
             </p>
-            <div className="flex flex-col md:flex-row justify-center gap-4">
-              <button className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-lg text-lg transition-colors flex items-center justify-center shadow-lg">
-                Explore Services <ArrowRight className="ml-2" size={20} />
+            <div className="flex flex-col sm:flex-row justify-center gap-6 items-center">
+              <button className="group bg-[#1A69A7] hover:bg-[#144d85] text-white font-bold py-4 px-10 rounded-xl text-lg transition-all duration-300 transform hover:scale-105 shadow-2xl hover:shadow-[#1A69A7]/50 flex items-center justify-center min-w-[200px]">
+                Explore Services 
+                <ArrowRight className="ml-3 group-hover:translate-x-1 transition-transform" size={20} />
               </button>
-              <Link to="/contact" className="border-2 border-white hover:bg-white hover:text-orange-600 text-white font-bold py-4 px-8 rounded-lg text-lg transition-colors">
+              <button className="border-2 border-white hover:bg-white hover:text-[#1A69A7] text-white font-bold py-4 px-10 rounded-xl text-lg transition-all duration-300 transform hover:scale-105 shadow-lg min-w-[200px]">
                 Get Quote
-              </Link>
+              </button>
             </div>
           </div>
         </div>
-
-        {/* Decorative elements */}
-        <div className="absolute top-10 right-10 w-20 h-20 bg-white bg-opacity-10 rounded-full"></div>
-        <div className="absolute bottom-10 left-10 w-16 h-16 bg-white bg-opacity-10 rounded-full"></div>
       </div>
 
       {/* Why Choose Us Section */}
-      <div className="py-20 bg-gray-50">
+      <div className="py-24 bg-gradient-to-b from-gray-50 to-white">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-            <div>
-              <h2 className="text-3xl md:text-4xl font-bold mb-8 text-gray-800">Why Choose Us</h2>
-              <p className="text-gray-600 mb-10 text-lg leading-relaxed">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center max-w-7xl mx-auto">
+            <div className={`transition-all duration-1000 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10'}`}>
+              <h2 className="text-4xl md:text-5xl font-bold mb-8 text-gray-800 leading-tight">
+                Why Choose <span className="text-[#1A69A7]">Us</span>
+              </h2>
+              <p className="text-gray-600 mb-12 text-xl leading-relaxed">
                 At Assignoz Consultancy, we deliver expert, plagiarism-free 
                 academic writing with timely delivery and strict confidentiality. 
                 Our dedicated support team is available 24/7 to ensure 
@@ -95,76 +129,78 @@ export default function Home() {
               </p>
 
               <div className="space-y-8">
-                <div className="flex items-start space-x-4">
-                  <div className="bg-blue-100 w-14 h-14 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <BookOpen className="text-blue-600" size={24} />
+                {features.map((feature, index) => (
+                  <div 
+                    key={index}
+                    className={`flex items-start space-x-6 p-6 rounded-2xl transition-all duration-500 hover:bg-white hover:shadow-xl transform hover:scale-105 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`}
+                    style={{ transitionDelay: `${index * 200}ms` }}
+                  >
+                    <div className="bg-gradient-to-br from-[#1A69A7] to-[#144d85] w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                      <feature.icon className="text-white" size={28} />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-800 mb-3 leading-tight">{feature.title}</h3>
+                      <p className="text-gray-600 leading-relaxed">{feature.description}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-800 mb-3">Expert Writers & Wide Subject Coverage</h3>
-                    <p className="text-gray-600">Our highly qualified professionals specialize in various academic fields, covering subjects from humanities to sciences.</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-4">
-                  <div className="bg-blue-100 w-14 h-14 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <CheckCircle className="text-blue-600" size={24} />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-800 mb-3">100% Plagiarism-Free & Well-Researched Content</h3>
-                    <p className="text-gray-600">We guarantee original, properly cited, and thoroughly researched academic work.</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-4">
-                  <div className="bg-blue-100 w-14 h-14 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Clock className="text-blue-600" size={24} />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-800 mb-3">Timely Delivery & Customized Solutions</h3>
-                    <p className="text-gray-600">We meet deadlines, even for urgent assignments, while tailoring content to your specific academic needs.</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-4">
-                  <div className="bg-blue-100 w-14 h-14 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Shield className="text-blue-600" size={24} />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-800 mb-3">Confidential & 24/7 Support</h3>
-                    <p className="text-gray-600">Your privacy is completely secure, and our support team is available anytime to assist you.</p>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
 
-            <div className="relative">
-              <div className="bg-white rounded-2xl shadow-2xl p-2 relative z-10 transform rotate-2">
-                <img 
-                  src="https://images.unsplash.com/photo-1434030216411-0b793f4b4173?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
-                  alt="Student writing and studying" 
-                  className="w-full h-80 object-cover rounded-xl"
-                />
+            <div className={`relative transition-all duration-1000 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-10'}`}>
+              <div className="relative group">
+                <div className="bg-white rounded-3xl shadow-2xl p-3 relative z-10 transform rotate-2 group-hover:rotate-0 transition-all duration-500">
+                  <img 
+                    src="https://images.unsplash.com/photo-1434030216411-0b793f4b4173?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
+                    alt="Student writing and studying" 
+                    className="w-full h-96 object-cover rounded-2xl"
+                  />
+                </div>
+                <div className="absolute -bottom-8 -right-8 w-full h-full bg-gradient-to-br from-orange-200 to-orange-300 rounded-3xl transform -rotate-2 group-hover:-rotate-1 transition-all duration-500"></div>
+                <div className="absolute top-8 left-8 w-24 h-24 bg-gradient-to-br from-[#1A69A7]/30 to-blue-300/30 rounded-full animate-pulse"></div>
+                <div className="absolute bottom-16 right-16 w-16 h-16 bg-gradient-to-br from-orange-300/40 to-pink-300/40 rounded-full animate-bounce"></div>
               </div>
-              <div className="absolute -bottom-6 -right-6 w-full h-full bg-orange-200 rounded-2xl transform -rotate-2"></div>
-              <div className="absolute top-6 left-6 w-20 h-20 bg-blue-200 rounded-full opacity-50"></div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Our Services Section */}
-      <div className="py-20 bg-white">
+      <div className="py-24 bg-white">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-16 text-gray-800">Our Services</h2>
+          <div className="text-center mb-20">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6 text-gray-800">
+              Our <span className="text-[#1A69A7]">Services</span>
+            </h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Comprehensive academic writing solutions tailored to your needs
+            </p>
+          </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
             {services.map((service, index) => (
-              <div key={index} className="bg-blue-600 text-white p-8 rounded-xl hover:bg-blue-700 transition-all duration-300 transform hover:scale-105 shadow-lg">
-                <h3 className="text-xl font-bold mb-4">{service.title}</h3>
-                <p className="text-blue-100 mb-6 leading-relaxed">{service.description}</p>
-                <button className="text-white hover:text-blue-200 font-semibold transition-colors flex items-center">
-                  {service.link}
-                </button>
+              <div 
+                key={index} 
+                className={`group bg-gradient-to-br from-[#1A69A7] to-[#144d85] text-white p-8 rounded-2xl hover:shadow-2xl transition-all duration-500 transform hover:scale-105 hover:-translate-y-2 cursor-pointer ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
+                style={{ transitionDelay: `${index * 150}ms` }}
+                onMouseEnter={() => setActiveCard(index)}
+                onMouseLeave={() => setActiveCard(null)}
+              >
+                <div className="relative overflow-hidden">
+                  <h3 className="text-xl font-bold mb-4 group-hover:text-orange-200 transition-colors">
+                    {service.title}
+                  </h3>
+                  <p className="text-blue-100 mb-6 leading-relaxed text-sm">
+                    {service.description}
+                  </p>
+                  <button className="text-white hover:text-orange-200 font-semibold transition-all duration-300 flex items-center group-hover:translate-x-2">
+                    {service.link}
+                    <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" size={16} />
+                  </button>
+                  
+                  {/* Hover Effect Overlay */}
+                  <div className={`absolute inset-0 bg-gradient-to-r from-orange-400/20 to-pink-400/20 rounded-2xl transition-opacity duration-300 ${activeCard === index ? 'opacity-100' : 'opacity-0'}`}></div>
+                </div>
               </div>
             ))}
           </div>
@@ -172,21 +208,41 @@ export default function Home() {
       </div>
 
       {/* Client Testimonials */}
-      <div className="py-20 bg-gray-50">
+      <div className="py-24 bg-gradient-to-b from-gray-50 to-white">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-16 text-gray-800">Client Testimonials</h2>
+          <div className="text-center mb-20">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6 text-gray-800">
+              Client <span className="text-[#1A69A7]">Testimonials</span>
+            </h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              What our satisfied clients say about our services
+            </p>
+          </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 max-w-6xl mx-auto">
             {testimonials.map((testimonial, index) => (
-              <div key={index} className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-shadow">
-                <div className="flex mb-4">
+              <div 
+                key={index} 
+                className={`group bg-white p-10 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:scale-105 border border-gray-100 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
+                style={{ transitionDelay: `${index * 200}ms` }}
+              >
+                <div className="flex mb-6">
                   {[...Array(testimonial.rating)].map((_, i) => (
-                    <Star key={i} className="text-yellow-400 fill-current" size={20} />
+                    <Star key={i} className="text-yellow-400 fill-current animate-pulse" size={24} style={{ animationDelay: `${i * 100}ms` }} />
                   ))}
                 </div>
-                <h3 className="text-xl font-bold mb-4 text-gray-800">"{testimonial.title}"</h3>
-                <p className="text-gray-600 mb-6 leading-relaxed italic">"{testimonial.text}"</p>
-                <p className="text-gray-500 font-medium">{testimonial.author}</p>
+                <h3 className="text-2xl font-bold mb-4 text-gray-800 group-hover:text-[#1A69A7] transition-colors">
+                  {testimonial.title}
+                </h3>
+                <p className="text-gray-600 mb-8 leading-relaxed text-lg italic">
+                  "{testimonial.text}"
+                </p>
+                <div className="flex items-center">
+                  <div className="w-12 h-12 bg-gradient-to-br from-[#1A69A7] to-[#144d85] rounded-full flex items-center justify-center text-white font-bold text-lg mr-4">
+                    {testimonial.author.charAt(2)}
+                  </div>
+                  <p className="text-gray-700 font-semibold text-lg">{testimonial.author}</p>
+                </div>
               </div>
             ))}
           </div>
