@@ -21,6 +21,8 @@ import Createticket from './pages/ticket/Createticket';
 import Alltickets from './pages/ticket/Alltickets';
 import Oneticket from './pages/ticket/Oneticket';
 import Deleteticket from './pages/ticket/Deleteticket';
+import ReplyTicket from './pages/ticket/ReplyTicket';
+import UserTicketReplies from './pages/ticket/UserTicketReplies';
 
 
 function App() {
@@ -70,6 +72,8 @@ function App() {
         <Route path ="/createticket" element = {<Createticket/>}/>
         <Route path ="/oneticket/:id" element = {<Oneticket/>}/>
         <Route path ="/deleteticket/:id" element = {<Deleteticket/>}/>
+        <Route path="/admin/tickets/reply" element={<ReplyTicket />} />
+        <Route path="/replies" element={<UserTicketReplies />} />
 
   </Routes>
  
