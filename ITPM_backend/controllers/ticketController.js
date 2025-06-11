@@ -123,3 +123,35 @@ export const getTicketsByPriority = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+
+//Get count of tickets department wise
+
+
+export const getTicketCountByDepartment = async (req, res) => {
+  try {
+    // List all possible departments here
+    const allDepartments = ["IT", "HR", "Finance", "Support", "Sales"]; // Add your departments
+
+    const counts = await Ticket.aggregate([
+      {
+        $group: {
+          _id: "$department",
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+    // Convert array to object: { department: count }
+    const result = {};
+    allDepartments.forEach(dep => {
+      result[dep] = 0;
+    });
+    counts.forEach(item => {
+      result[item._id] = item.count;
+    });
+    res.status(200).json(result);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
