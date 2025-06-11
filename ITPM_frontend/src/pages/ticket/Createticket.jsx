@@ -385,8 +385,8 @@ export default function CreateTicketPage() {
               <div className="mt-2 text-sm text-blue-700">
                 <p>If you're experiencing technical difficulties or need immediate assistance, you can also:</p>
                 <ul className="list-disc pl-5 mt-1 space-y-1">
-                  <li>Call our support hotline: <span className="font-semibold">1-800-SUPPORT</span></li>
-                  <li>Email us directly: <span className="font-semibold">support@company.com</span></li>
+                  <li>Call our support hotline: <span className="font-semibold">072 525 5555</span></li>
+                  <li>Email us directly: <span className="font-semibold">support@residue.com</span></li>
                   <li>Check our <button className="underline hover:text-blue-600">knowledge base</button> for common solutions</li>
                 </ul>
               </div>
