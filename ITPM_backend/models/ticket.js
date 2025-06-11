@@ -43,6 +43,13 @@ const ticketSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    status: {
+        type: String,
+        default: "Open",
+        enum: ["Open", "In Progress", "Resolved", "Closed"],
+    },
+
+
 });
 
 //  Auto-increment ticket id 
