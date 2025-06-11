@@ -31,6 +31,15 @@ export const getAllemployee = async(req, res) =>{
         res.status(500).json({error:error}); 
     }
 }
+
+export async function getEmployeeCount(req, res) {
+  try {
+    const count = await Employee.countDocuments();
+    res.json({ count });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to get Employee count" });
+  }
+}
 //delete operation
 export const deleteEmployee = async(req, res) =>{
     try {
