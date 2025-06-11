@@ -10,7 +10,9 @@ export default function Dashboard() {
   const [loadingBookings, setLoadingBookings] = useState(true);
   const [highPriorityConcerns, setHighPriorityConcerns] = useState([]);
   const [loadingConcerns, setLoadingConcerns] = useState(true);
-
+  const [totalTickets, setTotalTickets] = useState(0);
+  const [userCount, setUserCount] = useState(0);
+  const [empCount, setEmpCount] = useState(0);
   const stats = [
     { title: 'Total Tickets', value: '9', icon: <FaTicketAlt />, change: '+18%', color: 'bg-blue-500' },
     { title: 'Users', value: '10', icon: <FaChartLine />, change: '', color: 'bg-green-500' },
@@ -67,6 +69,20 @@ export default function Dashboard() {
     fetchConcerns();
   }, []);
 
+  useEffect(() => {
+  axios.get('http://localhost:3002/api/users/user/count')
+    .then(res => setUserCount(res.data.count))
+    .catch(() => setUserCount(0));
+}, []);
+
+/**http://localhost:3002/api/employee/count */
+
+  useEffect(() => {
+  axios.get('http://localhost:3002/api/employee/count')
+    .then(res => setEmpCount(res.data.count))
+    .catch(() => setEmpCount(0));
+}, []);
+
   return (
     <div className="bg-gray-50 min-h-screen p-6">
       <div className="mb-8">
@@ -75,75 +91,97 @@ export default function Dashboard() {
       </div>
 
       {/* Stats Cards */}
-<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-  {/* Card 1 */}
-  <div className="bg-white rounded-xl shadow-sm p-6 transition-all duration-300 ease-in-out hover:shadow-lg hover:-translate-y-1 hover:bg-gray-50/50 group">
-    <div className="flex justify-between items-start">
-      <div className="flex-1">
-        <p className="text-gray-500 text-sm font-medium transition-colors duration-200 group-hover:text-gray-600">
-          Total Tickets
-        </p>
-        <h3 className="text-2xl font-bold text-gray-800 mt-1 transition-colors duration-200 group-hover:text-gray-900">
-          9
-        </h3>
-        <span className="inline-block mt-2 text-sm font-medium text-green-600 transition-all duration-200 group-hover:text-green-700">
-          +18%
-        </span>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+
+        {/* Card 1 */}
+        <div className="bg-white rounded-2xl p-8 group cursor-pointer border border-gray-100 transform-gpu perspective-1000">
+          <div className="flex justify-between items-start">
+            <div className="flex-1 relative">
+              <p className="text-gray-500 text-base font-semibold mb-4">
+                Total Tickets
+              </p>
+
+              {/* Large Clean Number */}
+              <div className="relative mb-2">
+                <h3 className="text-6xl font-black text-transparent bg-gradient-to-br from-gray-800 via-gray-900 to-gray-700 bg-clip-text relative z-10"
+                  style={{
+                    transform: 'rotateX(5deg) rotateY(-2deg)',
+                    transformStyle: 'preserve-3d'
+                  }}>
+                  {totalTickets}
+                </h3>
+              </div>
+
+            </div>
+
+            {/* Clean Icon */}
+            <div className='bg-blue-500 text-white p-3 rounded-lg transition-all duration-300 ease-in-out group-hover:scale-110 group-hover:shadow-md'>
+
+              <FaTicketAlt />
+            </div>
+          </div>
+        </div>
+        {/* Card 2 */}
+        <div className="bg-white rounded-2xl p-8 group cursor-pointer border border-gray-100 transform-gpu perspective-1000">
+          <div className="flex justify-between items-start">
+            <div className="flex-1 relative">
+              <p className="text-gray-500 text-base font-semibold mb-4">
+                Users
+              </p>
+
+              {/* Large Clean Number */}
+              <div className="relative mb-2">
+                <h3 className="text-6xl font-black text-transparent bg-gradient-to-br from-gray-800 via-gray-900 to-gray-700 bg-clip-text relative z-10"
+                  style={{
+                    transform: 'rotateX(5deg) rotateY(-2deg)',
+                    transformStyle: 'preserve-3d'
+                  }}>
+                  {userCount}
+                </h3>
+              </div>
+
+            </div>
+
+            {/* Clean Icon */}
+            <div className="bg-gradient-to-br from-green-500 via-green-600 to-emerald-600 text-white p-4 rounded-2xl relative overflow-hidden"
+              style={{
+                transform: 'rotateX(-5deg) rotateY(5deg)',
+                transformStyle: 'preserve-3d'
+              }}>
+
+              <FaChartLine className="relative z-10 text-xl" />
+            </div>
+          </div>
+        </div>
+        {/* Card 3 */}
+        <div className="bg-white rounded-2xl p-8 group cursor-pointer border border-gray-100 transform-gpu perspective-1000">
+          <div className="flex justify-between items-start">
+            <div className="flex-1 relative">
+              <p className="text-gray-500 text-base font-semibold mb-4">
+                Employees
+              </p>
+
+              {/* Large Clean Number */}
+              <div className="relative mb-2">
+                <h3 className="text-6xl font-black text-transparent bg-gradient-to-br from-gray-800 via-gray-900 to-gray-700 bg-clip-text relative z-10"
+                  style={{
+                    transform: 'rotateX(5deg) rotateY(-2deg)',
+                    transformStyle: 'preserve-3d'
+                  }}>
+                  {empCount}
+                </h3>
+              </div>
+
+            </div>
+
+            {/* Clean Icon */}
+            <div className="bg-purple-500 text-white p-3 rounded-lg transition-all duration-300 ease-in-out group-hover:scale-110 group-hover:shadow-md">
+              <FaUsers />
+            </div>
+          </div>
+        </div>
+       
       </div>
-      <div className="bg-blue-500 text-white p-3 rounded-lg transition-all duration-300 ease-in-out group-hover:scale-110 group-hover:shadow-md">
-        <FaTicketAlt />
-      </div>
-    </div>
-  </div>
-  {/* Card 2 */}
-  <div className="bg-white rounded-xl shadow-sm p-6 transition-all duration-300 ease-in-out hover:shadow-lg hover:-translate-y-1 hover:bg-gray-50/50 group">
-    <div className="flex justify-between items-start">
-      <div className="flex-1">
-        <p className="text-gray-500 text-sm font-medium transition-colors duration-200 group-hover:text-gray-600">
-          Users
-        </p>
-        <h3 className="text-2xl font-bold text-gray-800 mt-1 transition-colors duration-200 group-hover:text-gray-900">
-          10
-        </h3>
-      </div>
-      <div className="bg-green-500 text-white p-3 rounded-lg transition-all duration-300 ease-in-out group-hover:scale-110 group-hover:shadow-md">
-        <FaChartLine />
-      </div>
-    </div>
-  </div>
-  {/* Card 3 */}
-  <div className="bg-white rounded-xl shadow-sm p-6 transition-all duration-300 ease-in-out hover:shadow-lg hover:-translate-y-1 hover:bg-gray-50/50 group">
-    <div className="flex justify-between items-start">
-      <div className="flex-1">
-        <p className="text-gray-500 text-sm font-medium transition-colors duration-200 group-hover:text-gray-600">
-          Active Admins
-        </p>
-        <h3 className="text-2xl font-bold text-gray-800 mt-1 transition-colors duration-200 group-hover:text-gray-900">
-          6
-        </h3>
-      </div>
-      <div className="bg-purple-500 text-white p-3 rounded-lg transition-all duration-300 ease-in-out group-hover:scale-110 group-hover:shadow-md">
-        <FaUsers />
-      </div>
-    </div>
-  </div>
-  {/* Card 4 */}
-  <div className="bg-white rounded-xl shadow-sm p-6 transition-all duration-300 ease-in-out hover:shadow-lg hover:-translate-y-1 hover:bg-gray-50/50 group">
-    <div className="flex justify-between items-start">
-      <div className="flex-1">
-        <p className="text-gray-500 text-sm font-medium transition-colors duration-200 group-hover:text-gray-600">
-          Active Admins
-        </p>
-        <h3 className="text-2xl font-bold text-gray-800 mt-1 transition-colors duration-200 group-hover:text-gray-900">
-          6
-        </h3>
-      </div>
-      <div className="bg-purple-500 text-white p-3 rounded-lg transition-all duration-300 ease-in-out group-hover:scale-110 group-hover:shadow-md">
-        <FaUsers />
-      </div>
-    </div>
-  </div>
-</div>
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
@@ -168,7 +206,7 @@ export default function Dashboard() {
           {/* Chart Placeholder - In real app, use chart library like recharts */}
 
           <div className="flex-1 min-h-0">
-            <TicketDepartmentChart />
+            <TicketDepartmentChart onTotalTickets={setTotalTickets} />
           </div>
 
         </div>
@@ -280,9 +318,9 @@ export default function Dashboard() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full transition-all duration-300 transform group-hover:scale-105 ${booking.priority === 'High' ? 'bg-red-100 text-red-800 group-hover:bg-red-200 group-hover:shadow-sm' :
-                          booking.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800 group-hover:bg-yellow-200 group-hover:shadow-sm' :
-                            booking.priority === 'Low' ? 'bg-green-100 text-green-800 group-hover:bg-green-200 group-hover:shadow-sm' :
-                              'bg-gray-100 text-gray-800 group-hover:bg-gray-200 group-hover:shadow-sm'
+                        booking.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800 group-hover:bg-yellow-200 group-hover:shadow-sm' :
+                          booking.priority === 'Low' ? 'bg-green-100 text-green-800 group-hover:bg-green-200 group-hover:shadow-sm' :
+                            'bg-gray-100 text-gray-800 group-hover:bg-gray-200 group-hover:shadow-sm'
                         }`}>
                         {booking.priority}
                       </span>
