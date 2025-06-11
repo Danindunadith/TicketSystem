@@ -9,7 +9,8 @@ import {
   deleteTicket,
   getTicketsByEmail,
   getTicketsByDepartment,
-  getTicketsByPriority
+  getTicketsByPriority,
+  getTicketCountByDepartment
 } from "../controllers/ticketController.js";
 
 const router = express.Router();
@@ -46,6 +47,7 @@ router.put("/:id", updateTicket);
 router.delete("/:id", deleteTicket);
 router.get("/email/:email", getTicketsByEmail);
 router.get("/department/:department", getTicketsByDepartment);
+router.get("/count/department", getTicketCountByDepartment);
 router.get("/priority/:priority", getTicketsByPriority);
 
 export default router;
