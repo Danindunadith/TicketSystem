@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -16,7 +16,14 @@ export default function CreateTicketPage() {
     statement: ""
   });
   const [loading, setLoading] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [sentimentResult, setSentimentResult] = useState(null);
+  const [sentimentScore, setSentimentScore] = useState(null);
+  const [suggestedPriority, setSuggestedPriority] = useState(null);
   const navigate = useNavigate();
+
+  // Your Hugging Face API token
+  const HF_API_TOKEN = process.env.REACT_APP_HF_API_TOKEN; 
 
   const handleChange = (e) => {
     const { name, value, files } = e.target;
@@ -24,6 +31,84 @@ export default function CreateTicketPage() {
       ...formData,
       [name]: files ? files[0] : value
     });
+    
+    // Reset sentiment analysis when statement changes
+    if (name === "statement" && value !== formData.statement) {
+      setSentimentResult(null);
+      setSuggestedPriority(null);
+    }
+  };
+
+  // Analyze sentiment when statement has sufficient content
+  useEffect(() => {
+    const analyzeSentiment = async () => {
+      // Only analyze if there's sufficient text (20+ characters)
+      if (formData.statement && formData.statement.trim().length > 20) {
+        setAnalyzing(true);
+        try {
+          // Call Hugging Face API for sentiment analysis
+          const response = await axios.post(
+            "https://api-inference.huggingface.co/models/distilbert-base-uncased-finetuned-sst-2-english",
+            {
+              inputs: formData.statement
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${HF_API_TOKEN}`,
+                "Content-Type": "application/json"
+              }
+            }
+          );
+          
+          setSentimentResult(response.data[0]);
+          
+          // Find negative sentiment score
+          let negativeScore = 0;
+          for (const result of response.data[0]) {
+            if (result.label === "NEGATIVE") {
+              negativeScore = result.score;
+              break;
+            }
+          }
+          
+          setSentimentScore(negativeScore);
+          
+          // Determine suggested priority based on negative sentiment score
+          let priority;
+          if (negativeScore > 0.9) {
+            priority = "Urgent";
+          } else if (negativeScore > 0.7) {
+            priority = "High";
+          } else if (negativeScore > 0.4) {
+            priority = "Medium";
+          } else {
+            priority = "Low";
+          }
+          
+          setSuggestedPriority(priority);
+        } catch (error) {
+          console.error("Error analyzing sentiment:", error);
+        } finally {
+          setAnalyzing(false);
+        }
+      }
+    };
+    
+    // Debounce the analysis to avoid too many API calls
+    const timerId = setTimeout(() => {
+      analyzeSentiment();
+    }, 1000);
+    
+    return () => clearTimeout(timerId);
+  }, [formData.statement]);
+
+  // Apply the suggested priority from AI
+  const applySuggestedPriority = () => {
+    setFormData({
+      ...formData,
+      priority: suggestedPriority
+    });
+    toast.success(`AI suggestion applied: ${suggestedPriority} priority`);
   };
 
   const handleSubmit = async (e) => {
@@ -46,6 +131,11 @@ export default function CreateTicketPage() {
         formDataToSend.append("attachment", formData.attachment);
       }
       formDataToSend.append("statement", formData.statement);
+      
+      // Include sentiment score if available
+      if (sentimentScore !== null) {
+        formDataToSend.append("sentimentScore", sentimentScore);
+      }
 
       const response = await axios.post(apiUrl, formDataToSend, {
         headers: {
@@ -299,6 +389,65 @@ export default function CreateTicketPage() {
                   Tip: Include error messages, screenshots, and steps you've already tried
                 </p>
               </div>
+              
+              {/* AI Sentiment Analysis Section */}
+              {formData.statement && formData.statement.trim().length > 20 && (
+                <div className="mt-4 mb-6">
+                  {analyzing ? (
+                    <div className="flex items-center text-sm text-gray-500">
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-500" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      AI is analyzing your ticket text...
+                    </div>
+                  ) : sentimentResult && (
+                    <div className="rounded-lg border bg-gray-50 p-4">
+                      <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
+                        <svg className="w-4 h-4 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                        </svg>
+                        AI Sentiment Analysis
+                      </h4>
+                      
+                      {sentimentScore !== null && (
+                        <div className="mb-3">
+                          <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full ${sentimentScore > 0.7 ? 'bg-red-500' : sentimentScore > 0.4 ? 'bg-yellow-500' : 'bg-green-500'}`}
+                              style={{ width: `${sentimentScore * 100}%` }}
+                            ></div>
+                          </div>
+                          <div className="flex justify-between mt-1 text-xs text-gray-500">
+                            <span>Positive</span>
+                            <span>Neutral</span>
+                            <span>Negative</span>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {suggestedPriority && (
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-gray-600">
+                              AI suggests <span className={`font-semibold ${getPriorityColor(suggestedPriority).replace('bg-', 'text-').replace('-50', '-600')}`}>
+                                {suggestedPriority} priority
+                              </span> based on your description.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={applySuggestedPriority}
+                            className="px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded text-sm font-medium"
+                          >
+                            Apply Suggestion
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div>
                 <label htmlFor="attachment" className="block text-sm font-medium text-gray-700 mb-2">
@@ -385,8 +534,8 @@ export default function CreateTicketPage() {
               <div className="mt-2 text-sm text-blue-700">
                 <p>If you're experiencing technical difficulties or need immediate assistance, you can also:</p>
                 <ul className="list-disc pl-5 mt-1 space-y-1">
-                  <li>Call our support hotline: <span className="font-semibold">1-800-SUPPORT</span></li>
-                  <li>Email us directly: <span className="font-semibold">support@company.com</span></li>
+                  <li>Call our support hotline: <span className="font-semibold">072 525 5555</span></li>
+                  <li>Email us directly: <span className="font-semibold">support@residue.com</span></li>
                   <li>Check our <button className="underline hover:text-blue-600">knowledge base</button> for common solutions</li>
                 </ul>
               </div>

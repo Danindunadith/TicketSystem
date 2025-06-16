@@ -11,8 +11,27 @@ export const createTicket = async (req, res) => {
       department,
       relatedservice,
       priority,
-      statement
+      statement,
+      sentimentScore
     } = req.body;
+    
+    // Process sentiment score if available
+    const parsedSentimentScore = sentimentScore ? parseFloat(sentimentScore) : null;
+    
+    // Determine AI suggested priority based on sentiment score
+    let aiSuggestedPriority = null;
+    if (parsedSentimentScore !== null) {
+      if (parsedSentimentScore > 0.9) {
+        aiSuggestedPriority = "Urgent";
+      } else if (parsedSentimentScore > 0.7) {
+        aiSuggestedPriority = "High";
+      } else if (parsedSentimentScore > 0.4) {
+        aiSuggestedPriority = "Medium";
+      } else {
+        aiSuggestedPriority = "Low";
+      }
+    }
+    
     const attachment = req.file ? `/uploads/${req.file.filename}` : "";
 
     const ticket = new Ticket({
@@ -24,8 +43,13 @@ export const createTicket = async (req, res) => {
       relatedservice,
       priority,
       attachment,
-      statement
+      statement,
+      // Add sentiment analysis data
+      sentimentScore: parsedSentimentScore,
+      aiSuggestedPriority,
+      sentimentAnalyzedAt: parsedSentimentScore ? new Date() : null
     });
+    
     await ticket.save();
     res.status(201).json(ticket);
   } catch (error) {
@@ -124,10 +148,31 @@ export const getTicketsByPriority = async (req, res) => {
   }
 };
 
+// Get tickets by sentiment score range
+export const getTicketsBySentimentScore = async (req, res) => {
+  try {
+    const { min, max } = req.query;
+    const minScore = parseFloat(min) || 0;
+    const maxScore = parseFloat(max) || 1;
+    
+    const tickets = await Ticket.find({ 
+      sentimentScore: { 
+        $gte: minScore, 
+        $lte: maxScore 
+      } 
+    });
+    
+    if (!tickets || tickets.length === 0) {
+      return res.status(404).json({ message: "No tickets found in this sentiment range" });
+    }
+    
+    res.status(200).json(tickets);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
-//Get count of tickets department wise
-
-
+// Get count of tickets department wise
 export const getTicketCountByDepartment = async (req, res) => {
   try {
     // List all possible departments here
@@ -155,3 +200,53 @@ export const getTicketCountByDepartment = async (req, res) => {
   }
 };
 
+// Get sentiment analysis statistics
+export const getSentimentStatistics = async (req, res) => {
+  try {
+    const stats = await Ticket.aggregate([
+      {
+        $match: { sentimentScore: { $ne: null } }
+      },
+      {
+        $group: {
+          _id: null,
+          avgSentiment: { $avg: "$sentimentScore" },
+          highPriorityCount: {
+            $sum: {
+              $cond: [{ $or: [{ $eq: ["$priority", "High"] }, { $eq: ["$priority", "Urgent"] }] }, 1, 0]
+            }
+          },
+          aiHighPriorityCount: {
+            $sum: {
+              $cond: [{ $or: [{ $eq: ["$aiSuggestedPriority", "High"] }, { $eq: ["$aiSuggestedPriority", "Urgent"] }] }, 1, 0]
+            }
+          },
+          priorityMatchCount: {
+            $sum: { $cond: [{ $eq: ["$priority", "$aiSuggestedPriority"] }, 1, 0] }
+          },
+          totalAnalyzed: { $sum: 1 }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          avgSentiment: 1,
+          highPriorityCount: 1,
+          aiHighPriorityCount: 1,
+          priorityMatchRate: { $divide: ["$priorityMatchCount", "$totalAnalyzed"] },
+          totalAnalyzed: 1
+        }
+      }
+    ]);
+    
+    res.status(200).json(stats[0] || {
+      avgSentiment: 0,
+      highPriorityCount: 0,
+      aiHighPriorityCount: 0,
+      priorityMatchRate: 0,
+      totalAnalyzed: 0
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
