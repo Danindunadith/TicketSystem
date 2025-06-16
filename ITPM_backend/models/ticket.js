@@ -55,15 +55,13 @@ const ticketSchema = new mongoose.Schema({
     sentimentAnalyzedAt: {
         type: Date,
         default: null
-    }
-}, { timestamps: true     status: {
+    },
+    status: {
         type: String,
         default: "Open",
         enum: ["Open", "In Progress", "Resolved", "Closed"],
-    },
-
-
-}); // Add timestamps for creation and update tracking
+    }
+}, { timestamps: true }); // Add timestamps for creation and update tracking
 
 //  Auto-increment ticket id 
 ticketSchema.plugin(AutoIncrement, { inc_field: 'ticketid' });
