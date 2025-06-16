@@ -9,6 +9,7 @@ import ErrorNotFound from "./error";
 import ProductOverview from "./productOverview";
 import { Footer } from "../../components/footer";
 import UserProfile from "./userProfile";
+import CreateTicketPage from "../ticket/Createticket";
 
 export default function HomePage(){
     return(
@@ -23,6 +24,7 @@ export default function HomePage(){
               <Route path="/gallery" element = {<Gallery/>}/>
               <Route path="/items" element = {<Items/>}/>
               <Route path="/" element = {<Home/>}/>
+              <Route path="/createticket" element = {<CreateTicketPage/>}/>
               <Route path="/userPage" element = {<UserProfile/>}/>
               <Route path="/product/:key" element = {<ProductOverview/>}/>
               <Route path="/*" element = {<ErrorNotFound/>}/>

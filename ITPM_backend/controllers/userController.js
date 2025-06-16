@@ -79,6 +79,15 @@ export async function getUsers(req,res){
     }
 }
 
+export async function getUserCount(req, res) {
+  try {
+    const count = await User.countDocuments();
+    res.json({ count });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to get user count" });
+  }
+}
+
 
 //update
 
