@@ -1,45 +1,7 @@
 import { useState } from "react";
 
 export default function UserTicketReplies() {
-    // Dummy data for demonstration
-    const [tickets] = useState([
-        {
-            id: "#5FB461",
-            topic: "Blue screen issue",
-            originalMessage: "Dear all, I paid my class fees online through the institute website but the payment was a success after entering my name, card number and CVV...",
-            status: "finished",
-            createdAt: "2024-06-19",
-            updatedAt: "2024-06-20",
-            adminReply: "Hello! I've checked your account and found that it was temporarily locked due to multiple failed login attempts. I've unlocked your account and sent a password reset link to your registered email address. Please check your inbox and spam folder. If you still face issues, please let us know.",
-            adminName: "Upadhi",
-            replyDate: "2024-06-20T14:45:00Z"
-        },
-        
-        {
-            id: "TKT-003",
-            topic: "Product Return Request",
-            originalMessage: "I received the wrong item in my recent order. I ordered a blue shirt size M but received a red shirt size L. How can I return this and get the correct item?",
-            status: "pending",
-            createdAt: "2024-06-05",
-            updatedAt: "2024-06-05",
-            adminReply: null,
-            adminName: null,
-            replyDate: null
-        },
-        {
-            id: "TKT-004",
-            topic: "OTP not received",
-            originalMessage: "I checked my balance and got a message from the bank saying so. The institute I'm mentioning here is a well known institute and has thousands of students paying online just like me...",
-            status: "finished",
-            createdAt: "2025-06-11",
-            updatedAt: "2025-06-11",
-            adminReply: "I apologize for the delay with your payment. Most probably it was fault from our side and we resolved it",
-            adminName: "Upadhi",
-            replyDate: "2024-06-11"
-        },
-        
-    ]);
-
+   
     // Helper function to format dates
     const formatDate = (dateString) => {
         const date = new Date(dateString);
