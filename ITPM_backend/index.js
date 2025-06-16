@@ -11,6 +11,8 @@ import peopleRoute from "./routes/peopleRoute.js";
 import employeeRoute from "./routes/employeeRoute.js";
 import StockRoute from "./routes/StockRoute.js";
 import ticketRoute from "./routes/ticketRoute.js";
+import replyTicketRoute from "./routes/replyTicketRoute.js";
+
 import cors from "cors";
 import fs from "fs";
 
@@ -74,6 +76,7 @@ app.use("/api/peoples", peopleRoute);
 app.use("/api/employee", employeeRoute);
 app.use("/api/stock", StockRoute);
 app.use("/api/tickets", ticketRoute);
+app.use("/api/reticket",replyTicketRoute)
 
 // Start Server
 const PORT = process.env.PORT || 3002;
