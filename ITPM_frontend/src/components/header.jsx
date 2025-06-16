@@ -30,7 +30,7 @@ export default function Header() {
     <img 
       src="logo.png" 
       alt="logo" 
-      className="w-[100px] h-[100px] object-cover   transition-transform hover:scale-105"
+      className="w-[80px] h-[80px] object-cover   transition-transform hover:scale-105"
     />
     
   </div>

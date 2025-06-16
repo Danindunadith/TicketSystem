@@ -23,7 +23,7 @@ import Oneticket from './pages/ticket/Oneticket';
 import Deleteticket from './pages/ticket/Deleteticket';
 import ReplyTicket from './pages/ticket/ReplyTicket';
 import UserTicketReplies from './pages/ticket/UserTicketReplies';
-
+import { TicketReplyProvider } from './context/TicketReplyContext';
 
 function App() {
  
@@ -31,7 +31,7 @@ function App() {
   return (
 <BrowserRouter>
 <Toaster position="top-right"/>
-
+<TicketReplyProvider>
   <Routes path="/*"> 
     <Route path = "/testing" element = {<Testing/>}/>
     <Route path = "/admin/*" element = {<AdminPage/>}/>
@@ -76,7 +76,7 @@ function App() {
         <Route path="/replies" element={<UserTicketReplies />} />
 
   </Routes>
- 
+  </TicketReplyProvider>
  </BrowserRouter>
  
 

@@ -1,64 +1,9 @@
 import { useState } from "react";
+import { useTicketReplies } from "../../context/TicketReplyContext";
+import { toast } from "react-hot-toast";
 
 export default function UserTicketReplies() {
-    // Dummy data for demonstration
-    const [tickets] = useState([
-        {
-            id: "TKT-001",
-            topic: "Account Login Issue",
-            originalMessage: "I'm unable to log into my account. It says my password is incorrect but I'm sure it's right. Can you please help me reset it?",
-            status: "finished",
-            createdAt: "2024-06-01T10:30:00Z",
-            updatedAt: "2024-06-02T14:45:00Z",
-            adminReply: "Hello! I've checked your account and found that it was temporarily locked due to multiple failed login attempts. I've unlocked your account and sent a password reset link to your registered email address. Please check your inbox and spam folder. If you still face issues, please let us know.",
-            adminName: "Sarah Johnson",
-            replyDate: "2024-06-02T14:45:00Z"
-        },
-        {
-            id: "TKT-002",
-            topic: "Payment Processing Error",
-            originalMessage: "My payment failed during checkout but my card was charged. Order #12345. Please help resolve this issue urgently.",
-            status: "in-process",
-            createdAt: "2024-06-03T09:15:00Z",
-            updatedAt: "2024-06-04T11:20:00Z",
-            adminReply: "Thank you for reaching out regarding order #12345. I've located the transaction and can see the payment authorization. Our finance team is currently investigating this issue with the payment processor. We expect to have this resolved within 24-48 hours. You'll receive a full refund if the order wasn't processed successfully. I'll keep you updated on the progress.",
-            adminName: "Mike Chen",
-            replyDate: "2024-06-04T11:20:00Z"
-        },
-        {
-            id: "TKT-003",
-            topic: "Product Return Request",
-            originalMessage: "I received the wrong item in my recent order. I ordered a blue shirt size M but received a red shirt size L. How can I return this and get the correct item?",
-            status: "pending",
-            createdAt: "2024-06-05T16:22:00Z",
-            updatedAt: "2024-06-05T16:22:00Z",
-            adminReply: null,
-            adminName: null,
-            replyDate: null
-        },
-        {
-            id: "TKT-004",
-            topic: "Shipping Delay Inquiry",
-            originalMessage: "My order was supposed to arrive yesterday but I haven't received it yet. The tracking shows it's still in transit. When can I expect delivery?",
-            status: "finished",
-            createdAt: "2024-05-28T13:45:00Z",
-            updatedAt: "2024-05-29T10:15:00Z",
-            adminReply: "I apologize for the delay with your shipment. I've contacted our shipping partner and your package was delayed due to weather conditions in your area. Your order has now been expedited and should arrive by tomorrow evening. As compensation for the inconvenience, I've added a 15% discount to your account for your next purchase. Thank you for your patience!",
-            adminName: "Emma Davis",
-            replyDate: "2024-05-29T10:15:00Z"
-        },
-        {
-            id: "TKT-005",
-            topic: "Feature Request - Dark Mode",
-            originalMessage: "Love your app! Would it be possible to add a dark mode option? It would be really helpful for using the app at night. Thanks for considering this!",
-            status: "in-process",
-            createdAt: "2024-06-04T20:10:00Z",
-            updatedAt: "2024-06-06T09:30:00Z",
-            adminReply: "Thank you so much for your feedback and suggestion! Dark mode is actually something we've been working on and it's currently in development. We're planning to include it in our next major update, which should be released within the next 2-3 months. I'll make sure to notify you once it's available. We really appreciate users like you who help us improve our product!",
-            adminName: "Alex Rodriguez",
-            replyDate: "2024-06-06T09:30:00Z"
-        }
-    ]);
+    const { ticketReplies, deleteTicketReply } = useTicketReplies();
 
     // Helper function to format dates
     const formatDate = (dateString) => {
@@ -112,6 +57,14 @@ export default function UserTicketReplies() {
         }
     };
 
+    // Handle delete ticket reply
+    const handleDeleteReply = (id) => {
+        if (window.confirm("Are you sure you want to delete this reply?")) {
+            deleteTicketReply(id);
+            toast.success("Reply deleted successfully!");
+        }
+    };
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 md:p-6">
             <div className="max-w-4xl mx-auto">
@@ -130,7 +83,7 @@ export default function UserTicketReplies() {
                                     </svg>
                                 </div>
                                 <div>
-                                    <p className="text-2xl font-bold text-gray-800">{tickets.filter(t => t.status === 'finished').length}</p>
+                                    <p className="text-2xl font-bold text-gray-800">{ticketReplies.filter(t => t.status === 'finished').length}</p>
                                     <p className="text-sm text-gray-600">Resolved</p>
                                 </div>
                             </div>
@@ -144,7 +97,7 @@ export default function UserTicketReplies() {
                                     </svg>
                                 </div>
                                 <div>
-                                    <p className="text-2xl font-bold text-gray-800">{tickets.filter(t => t.status === 'in-process').length}</p>
+                                    <p className="text-2xl font-bold text-gray-800">{ticketReplies.filter(t => t.status === 'in-process').length}</p>
                                     <p className="text-sm text-gray-600">In Progress</p>
                                 </div>
                             </div>
@@ -158,7 +111,7 @@ export default function UserTicketReplies() {
                                     </svg>
                                 </div>
                                 <div>
-                                    <p className="text-2xl font-bold text-gray-800">{tickets.filter(t => t.status === 'pending').length}</p>
+                                    <p className="text-2xl font-bold text-gray-800">{ticketReplies.filter(t => t.status === 'pending').length}</p>
                                     <p className="text-sm text-gray-600">Pending</p>
                                 </div>
                             </div>
@@ -168,7 +121,7 @@ export default function UserTicketReplies() {
 
                 {/* Tickets List */}
                 <div className="space-y-6">
-                    {tickets.map((ticket) => (
+                    {ticketReplies.map((ticket) => (
                         <div key={ticket.id} className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
                             {/* Ticket Header */}
                             <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
@@ -177,9 +130,20 @@ export default function UserTicketReplies() {
                                         <h3 className="text-lg font-semibold">{ticket.topic}</h3>
                                         <p className="text-blue-100 text-sm">Ticket #{ticket.id}</p>
                                     </div>
-                                    <div className={`flex items-center px-3 py-1 rounded-full border ${getStatusColor(ticket.status)}`}>
-                                        {getStatusIcon(ticket.status)}
-                                        <span className="ml-2 text-xs font-semibold capitalize">{ticket.status.replace('-', ' ')}</span>
+                                    <div className="flex items-center space-x-2">
+                                        <div className={`flex items-center px-3 py-1 rounded-full border ${getStatusColor(ticket.status)}`}>
+                                            {getStatusIcon(ticket.status)}
+                                            <span className="ml-2 text-xs font-semibold capitalize">{ticket.status.replace('-', ' ')}</span>
+                                        </div>
+                                        <button
+                                            onClick={() => handleDeleteReply(ticket.id)}
+                                            className="text-red-200 hover:text-white transition-colors"
+                                            title="Delete reply"
+                                        >
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -251,7 +215,7 @@ export default function UserTicketReplies() {
                 </div>
 
                 {/* Empty State (when no tickets) */}
-                {tickets.length === 0 && (
+                {ticketReplies.length === 0 && (
                     <div className="text-center py-12">
                         <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
                             <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -260,6 +224,7 @@ export default function UserTicketReplies() {
                         </div>
                         <h3 className="text-lg font-medium text-gray-900 mb-2">No Support Tickets</h3>
                         <p className="text-gray-500">You haven't submitted any support requests yet.</p>
+                        <p className="text-sm text-gray-400 mt-2">Submit a reply to a ticket to see it here.</p>
                     </div>
                 )}
             </div>
