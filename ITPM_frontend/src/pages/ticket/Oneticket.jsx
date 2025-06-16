@@ -224,7 +224,7 @@ export default function OneTicketPage() {
               
 
               <button 
-    onClick={() => navigate('/admin/tickets/reply', {state: ticket})}
+    onClick={() => navigate(`/admin/tickets/reply/${id}`, {state: ticket})}
     className="mt-6 w-full bg-green-500 text-white py-3 px-4 rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
 >
     Reply to ticket

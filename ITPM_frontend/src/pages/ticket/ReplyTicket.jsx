@@ -1,23 +1,19 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useParams } from "react-router-dom"; // <-- import useParams
 import { toast } from "react-hot-toast";
 import axios from "axios";
 
 export default function ReplyTicket() {
     const navigate = useNavigate();
-      //handle reply
-  const handleReply = () => {
-    navigate("/admin/tickets");
-  };
-
-    
+    const { id } = useParams(); // <-- get ticketId from URL params
     const location = useLocation();
     const ticket = location.state; // Get ticket data passed from previous page
-    
+
     const [formData, setFormData] = useState({
         topic: ticket?.topic || "",
         reply: "",
-        status: ticket?.status || "pending"
+        status: ticket?.status || "pending",
+        ticketId: id // <-- store ticketId in formData
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -33,21 +29,35 @@ export default function ReplyTicket() {
     // Handle form submission
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
+
         if (!formData.reply.trim()) {
             toast.error("Please enter a reply message");
             return;
         }
 
         setIsSubmitting(true);
-        
-        
+
+        try {
+            await axios.post(
+                `${import.meta.env.VITE_BACKEND_URL}/api/reticket/replyticket`,
+                formData
+            );
+            toast.success("Reply sent successfully!");
+            navigate(-1); // Go back or redirect as needed
+        } catch (err) {
+            toast.error("Failed to send reply");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     // Handle cancel
     const handleCancel = () => {
         navigate(-1); // Go back to previous page
     };
+
+    console.log("ReplyTicket formData:", formData); // Debugging line
+    console.log("ReplyTicket ticketId:", id); // Debugging line
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-6">
@@ -79,17 +89,16 @@ export default function ReplyTicket() {
                                     <p className="text-blue-100 text-sm">From: {ticket.customerEmail || "Customer"}</p>
                                 </div>
                                 <div className="text-right">
-                                    <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
-                                        ticket.status === 'finished' ? 'bg-green-100 text-green-800' :
-                                        ticket.status === 'in-process' ? 'bg-yellow-100 text-yellow-800' :
-                                        'bg-red-100 text-red-800'
-                                    }`}>
+                                    <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${ticket.status === 'finished' ? 'bg-green-100 text-green-800' :
+                                            ticket.status === 'in-process' ? 'bg-yellow-100 text-yellow-800' :
+                                                'bg-red-100 text-red-800'
+                                        }`}>
                                         {ticket.status}
                                     </span>
                                 </div>
                             </div>
                         </div>
-                        
+
                         {ticket.originalMessage && (
                             <div className="p-6">
                                 <h3 className="font-semibold text-gray-800 mb-2">Original Message:</h3>
@@ -178,11 +187,12 @@ export default function ReplyTicket() {
                                 Cancel
                             </button>
                             <button
-                onClick={handleReply}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
-              >
-                Send Reply
-              </button>
+                                type="submit" // <-- use type="submit"
+                                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+                                disabled={isSubmitting}
+                            >
+                                Send Reply
+                            </button>
                         </div>
                     </form>
                 </div>

@@ -55,6 +55,11 @@ const ticketSchema = new mongoose.Schema({
     sentimentAnalyzedAt: {
         type: Date,
         default: null
+    },
+    status: {
+        type: String,
+        default: "Open",
+        enum: ["Open", "In Progress", "Resolved", "Closed"],
     }
 }, { timestamps: true }); // Add timestamps for creation and update tracking
 

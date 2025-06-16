@@ -13,13 +13,7 @@ export default function Dashboard() {
   const [totalTickets, setTotalTickets] = useState(0);
   const [userCount, setUserCount] = useState(0);
   const [empCount, setEmpCount] = useState(0);
-  const stats = [
-    { title: 'Total Tickets', value: '9', icon: <FaTicketAlt />, change: '+18%', color: 'bg-blue-500' },
-    { title: 'Users', value: '10', icon: <FaChartLine />, change: '', color: 'bg-green-500' },
-    { title: 'Active Admins', value: '6', icon: <FaUsers />, change: '', color: 'bg-purple-500' },
-    { title: 'Active Admins', value: '6', icon: <FaUsers />, change: '', color: 'bg-purple-500' },
 
-  ];
 
   useEffect(() => {
     const fetchBookings = async () => {
@@ -269,10 +263,10 @@ export default function Dashboard() {
                   Date
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider transition-colors duration-200 hover:text-gray-700">
-                  Status
+                  Priority
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider transition-colors duration-200 hover:text-gray-700">
-                  Action
+                 Status
                 </th>
               </tr>
             </thead>
@@ -327,7 +321,7 @@ export default function Dashboard() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                       <button className="text-blue-600 hover:text-blue-900 transition-all duration-200 hover:bg-blue-50 px-3 py-1 rounded-lg hover:shadow-sm transform hover:scale-105">
-                        Details
+                       {booking.status || 'Pending'}
                       </button>
                     </td>
                   </tr>
