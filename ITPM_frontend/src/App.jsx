@@ -17,13 +17,6 @@ import AddOrder from './pages/Stocks/placeOrder/AddOrder';
 import EditOrder from './pages/Stocks/updateOrder/editOrder';
 import Profile from './pages/profile/profile';
 
-import Createticket from './pages/ticket/Createticket';
-import Alltickets from './pages/ticket/Alltickets';
-import Oneticket from './pages/ticket/Oneticket';
-import Deleteticket from './pages/ticket/Deleteticket';
-import ReplyTicket from './pages/ticket/ReplyTicket';
-import UserTicketReplies from './pages/ticket/UserTicketReplies';
-
 
 function App() {
  
@@ -68,12 +61,7 @@ function App() {
        <Route path="/addstocks" element={<AddOrder />} /> 
        <Route path="/editstocks/:id" element={<EditOrder />} />   
 
-        <Route path ="/tickets" element = {<Alltickets/>}/>
-        <Route path ="/createticket" element = {<Createticket/>}/>
-        <Route path ="/oneticket/:id" element = {<Oneticket/>}/>
-        <Route path ="/deleteticket/:id" element = {<Deleteticket/>}/>
-        <Route path="/admin/tickets/reply/:id" element={<ReplyTicket />} />
-        <Route path="/replies" element={<UserTicketReplies />} />
+
 
   </Routes>
  
