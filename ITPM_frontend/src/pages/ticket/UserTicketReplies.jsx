@@ -3,7 +3,7 @@ import { useTicketReplies } from "../../context/TicketReplyContext";
 import { toast } from "react-hot-toast";
 
 export default function UserTicketReplies() {
-    const { ticketReplies, deleteTicketReply } = useTicketReplies();
+    
 
     // Helper function to format dates
     const formatDate = (dateString) => {
