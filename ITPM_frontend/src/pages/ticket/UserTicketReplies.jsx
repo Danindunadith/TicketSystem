@@ -1,44 +1,16 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import { toast } from "react-hot-toast";
 
 export default function UserTicketReplies() {
-    const [replies, setReplies] = useState([]);
     const [tickets, setTickets] = useState([]);
-    const [loading, setLoading] = useState(true);
 
-    // 1. Fetch all replies
+    // Load data from localStorage on component mount
     useEffect(() => {
-        setLoading(true);
-        axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/reticket/replyticket`)
-            .then(res => setReplies(res.data))
-            .catch(() => setReplies([]))
-            .finally(() => setLoading(false));
+        const savedReplies = localStorage.getItem('ticketReplies');
+        if (savedReplies) {
+            setTickets(JSON.parse(savedReplies));
+        }
     }, []);
-
-    // 2. For each reply, fetch the ticket statement
-    useEffect(() => {
-        if (replies.length === 0) return;
-        Promise.all(
-            replies.map(reply =>
-                axios
-                    .get(`${import.meta.env.VITE_BACKEND_URL}/api/tickets/${reply.ticketId}`)
-                    .then(res => ({
-                        ...reply,
-                        statement: res.data.statement,
-                        ticketStatus: res.data.status,
-                        ticketSubject: res.data.subject,
-                        ticketCreatedAt: res.data.date
-                    }))
-                    .catch(() => ({
-                        ...reply,
-                        statement: "Statement not found",
-                        ticketStatus: "Unknown",
-                        ticketSubject: "Unknown",
-                        ticketCreatedAt: ""
-                    }))
-            )
-        ).then(repliesWithStatements => setTickets(repliesWithStatements));
-    }, [replies]);
 
     // Helper function to format dates
     const formatDate = (dateString) => {
@@ -99,9 +71,15 @@ export default function UserTicketReplies() {
         }
     };
 
-    if (loading) {
-        return <div className="p-8 text-center text-gray-500">Loading replies...</div>;
-    }
+    // Handle delete ticket reply
+    const handleDeleteReply = (id) => {
+        if (window.confirm("Are you sure you want to delete this reply?")) {
+            const updatedTickets = tickets.filter(ticket => ticket.id !== id);
+            setTickets(updatedTickets);
+            localStorage.setItem('ticketReplies', JSON.stringify(updatedTickets));
+            toast.success("Reply deleted successfully!");
+        }
+    };
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 md:p-6">
@@ -123,9 +101,20 @@ export default function UserTicketReplies() {
                                         <h3 className="text-lg font-semibold">{reply.ticketSubject}</h3>
                                         <p className="text-blue-100 text-sm">Ticket #{reply.ticketId}</p>
                                     </div>
-                                    <div className={`flex items-center px-3 py-1 rounded-full border ${getStatusColor(reply.ticketStatus)}`}>
-                                        {getStatusIcon(reply.ticketStatus)}
-                                        <span className="ml-2 text-xs font-semibold capitalize">{reply.ticketStatus}</span>
+                                    <div className="flex items-center space-x-2">
+                                        <div className={`flex items-center px-3 py-1 rounded-full border ${getStatusColor(ticket.status)}`}>
+                                            {getStatusIcon(ticket.status)}
+                                            <span className="ml-2 text-xs font-semibold capitalize">{ticket.status.replace('-', ' ')}</span>
+                                        </div>
+                                        <button
+                                            onClick={() => handleDeleteReply(ticket.id)}
+                                            className="text-red-200 hover:text-white transition-colors"
+                                            title="Delete reply"
+                                        >
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -182,8 +171,9 @@ export default function UserTicketReplies() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                             </svg>
                         </div>
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">No Ticket Replies</h3>
-                        <p className="text-gray-500">No replies have been submitted yet.</p>
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">No Support Tickets</h3>
+                        <p className="text-gray-500">You haven't submitted any support requests yet.</p>
+                        <p className="text-sm text-gray-400 mt-2">Submit a reply to a ticket to see it here.</p>
                     </div>
                 )}
             </div>

@@ -36,19 +36,8 @@ export default function ReplyTicket() {
         }
 
         setIsSubmitting(true);
-
-        try {
-            await axios.post(
-                `${import.meta.env.VITE_BACKEND_URL}/api/reticket/replyticket`,
-                formData
-            );
-            toast.success("Reply sent successfully!");
-            navigate(-1); // Go back or redirect as needed
-        } catch (err) {
-            toast.error("Failed to send reply");
-        } finally {
-            setIsSubmitting(false);
-        }
+        
+        
     };
 
     // Handle cancel
@@ -212,6 +201,16 @@ export default function ReplyTicket() {
                             </ul>
                         </div>
                     </div>
+                </div>
+
+                {/* View All Replies Button */}
+                <div className="mt-6 text-center">
+                    <button
+                        onClick={() => navigate("/replies")}
+                        className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors"
+                    >
+                        View All Replies
+                    </button>
                 </div>
             </div>
         </div>
