@@ -72,7 +72,7 @@ function App() {
         <Route path ="/createticket" element = {<Createticket/>}/>
         <Route path ="/oneticket/:id" element = {<Oneticket/>}/>
         <Route path ="/deleteticket/:id" element = {<Deleteticket/>}/>
-        <Route path="/admin/tickets/reply" element={<ReplyTicket />} />
+        <Route path="/admin/tickets/reply/:id" element={<ReplyTicket />} />
         <Route path="/replies" element={<UserTicketReplies />} />
 
   </Routes>

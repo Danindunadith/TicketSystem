@@ -36,6 +36,14 @@ const ticketSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    // New field for AI sentiment score
+    sentimentScore: {
+        type: Number,
+    },
+    // New field for AI suggested priority
+    aiSuggestedPriority: {
+        type: String,
+    },
     attachment: {
         type: String,
     },
@@ -43,7 +51,17 @@ const ticketSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-});
+    // Track when sentiment analysis was performed
+    sentimentAnalyzedAt: {
+        type: Date,
+        default: null
+    },
+    status: {
+        type: String,
+        default: "Open",
+        enum: ["Open", "In Progress", "Resolved", "Closed"],
+    }
+}, { timestamps: true }); // Add timestamps for creation and update tracking
 
 //  Auto-increment ticket id 
 ticketSchema.plugin(AutoIncrement, { inc_field: 'ticketid' });

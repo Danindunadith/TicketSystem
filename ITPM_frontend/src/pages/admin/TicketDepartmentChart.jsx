@@ -10,7 +10,7 @@ import {
   Cell
 } from 'recharts';
 
-export default function ModernTicketChart() {
+export default function ModernTicketChart({onTotalTickets}) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -85,6 +85,13 @@ export default function ModernTicketChart() {
   const avgTickets = data ? Math.round(totalTickets / data.length) : 0;
   const topDepartment = data?.[0];
 
+  // Pass totalTickets to parent when it changes
+  useEffect(() => {
+    if (onTotalTickets && typeof totalTickets === 'number') {
+      onTotalTickets(totalTickets);
+    }
+  }, [totalTickets, onTotalTickets]);
+
   if (loading) {
     return (
       <div className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-xl p-8 shadow-lg">
@@ -157,20 +164,7 @@ export default function ModernTicketChart() {
 
       {/* Stats Cards */}
       <div className="p-6 bg-gray-50 border-b">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
-            <div className="flex items-center">
-              <div className="bg-blue-100 rounded-full p-2 mr-3">
-                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-gray-900">{totalTickets}</div>
-                <div className="text-sm text-gray-500">Total Tickets</div>
-              </div>
-            </div>
-          </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
 
           <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
             <div className="flex items-center">
