@@ -41,7 +41,7 @@ app.use((req, res, next) => {
   if (token) {
     token = token.replace("Bearer ", "");
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || "fallback-secret");
       req.user = decoded;
       next();
     } catch (err) {
@@ -54,13 +54,21 @@ app.use((req, res, next) => {
 });
 
 // MongoDB Connection
-const mongoUrl = process.env.MONGO_URL;
-mongoose.connect(mongoUrl);
+const mongoUrl = process.env.MONGO_URL || "mongodb://localhost:27017/ticketsystem";
+
+// Try to connect to MongoDB
+mongoose.connect(mongoUrl)
+  .then(() => {
+    console.log("MongoDB Connection established successfully");
+  })
+  .catch((err) => {
+    console.error("MongoDB connection error:", err);
+    console.log("⚠️  MongoDB is not running. Please install and start MongoDB.");
+    console.log("📖 Installation guide: https://www.mongodb.com/try/download/community");
+    console.log("🚀 Or use MongoDB Atlas (cloud): https://www.mongodb.com/atlas");
+  });
 
 const connection = mongoose.connection;
-connection.once("open", () => {
-  console.log("MongoDB Connection established successfully");
-});
 connection.on("error", (err) => {
   console.error("MongoDB connection error:", err);
 });
@@ -75,8 +83,19 @@ app.use("/api/employee", employeeRoute);
 app.use("/api/stock", StockRoute);
 app.use("/api/tickets", ticketRoute);
 
+// Health check endpoint
+app.get("/health", (req, res) => {
+  res.json({ 
+    status: "Server is running", 
+    mongodb: connection.readyState === 1 ? "Connected" : "Disconnected",
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Start Server
 const PORT = process.env.PORT || 3002;
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`🚀 Server is running on port ${PORT}`);
+  console.log(`📊 Health check: http://localhost:${PORT}/health`);
+  console.log(`🎫 Ticket API: http://localhost:${PORT}/api/tickets`);
 });

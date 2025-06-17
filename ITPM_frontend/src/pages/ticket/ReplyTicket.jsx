@@ -41,7 +41,40 @@ export default function ReplyTicket() {
 
         setIsSubmitting(true);
         
-        
+        try {
+            // Create reply data object
+            const replyData = {
+                id: `TKT-${Date.now()}`,
+                topic: formData.topic,
+                originalMessage: ticket?.statement || ticket?.originalMessage || "Original ticket message",
+                status: formData.status,
+                createdAt: ticket?.date || new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                adminReply: formData.reply,
+                adminName: "Support Team",
+                replyDate: new Date().toISOString()
+            };
+
+            // Get existing replies from localStorage
+            const existingReplies = JSON.parse(localStorage.getItem('ticketReplies') || '[]');
+            
+            // Add new reply to the beginning of the array
+            const updatedReplies = [replyData, ...existingReplies];
+            
+            // Save back to localStorage
+            localStorage.setItem('ticketReplies', JSON.stringify(updatedReplies));
+            
+            toast.success("Reply submitted successfully!");
+            
+            // Navigate to UserTicketReplies page
+            navigate("/replies");
+            
+        } catch (error) {
+            console.error("Error submitting reply:", error);
+            toast.error("Failed to submit reply. Please try again.");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     // Handle cancel
@@ -202,6 +235,16 @@ export default function ReplyTicket() {
                             </ul>
                         </div>
                     </div>
+                </div>
+
+                {/* View All Replies Button */}
+                <div className="mt-6 text-center">
+                    <button
+                        onClick={() => navigate("/replies")}
+                        className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors"
+                    >
+                        View All Replies
+                    </button>
                 </div>
             </div>
         </div>

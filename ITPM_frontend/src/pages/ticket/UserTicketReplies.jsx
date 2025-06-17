@@ -1,44 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { toast } from "react-hot-toast";
 
 export default function UserTicketReplies() {
-    // Dummy data for demonstration
-    const [tickets] = useState([
-        {
-            id: "#5FB461",
-            topic: "Blue screen issue",
-            originalMessage: "Dear all, I paid my class fees online through the institute website but the payment was a success after entering my name, card number and CVV...",
-            status: "finished",
-            createdAt: "2024-06-19",
-            updatedAt: "2024-06-20",
-            adminReply: "Hello! I've checked your account and found that it was temporarily locked due to multiple failed login attempts. I've unlocked your account and sent a password reset link to your registered email address. Please check your inbox and spam folder. If you still face issues, please let us know.",
-            adminName: "Upadhi",
-            replyDate: "2024-06-20T14:45:00Z"
-        },
-        
-        {
-            id: "TKT-003",
-            topic: "Product Return Request",
-            originalMessage: "I received the wrong item in my recent order. I ordered a blue shirt size M but received a red shirt size L. How can I return this and get the correct item?",
-            status: "pending",
-            createdAt: "2024-06-05",
-            updatedAt: "2024-06-05",
-            adminReply: null,
-            adminName: null,
-            replyDate: null
-        },
-        {
-            id: "TKT-004",
-            topic: "OTP not received",
-            originalMessage: "I checked my balance and got a message from the bank saying so. The institute I'm mentioning here is a well known institute and has thousands of students paying online just like me...",
-            status: "finished",
-            createdAt: "2025-06-11",
-            updatedAt: "2025-06-11",
-            adminReply: "I apologize for the delay with your payment. Most probably it was fault from our side and we resolved it",
-            adminName: "Upadhi",
-            replyDate: "2024-06-11"
-        },
-        
-    ]);
+    const [tickets, setTickets] = useState([]);
+
+    // Load data from localStorage on component mount
+    useEffect(() => {
+        const savedReplies = localStorage.getItem('ticketReplies');
+        if (savedReplies) {
+            setTickets(JSON.parse(savedReplies));
+        }
+    }, []);
 
     // Helper function to format dates
     const formatDate = (dateString) => {
@@ -89,6 +61,16 @@ export default function UserTicketReplies() {
                 );
             default:
                 return null;
+        }
+    };
+
+    // Handle delete ticket reply
+    const handleDeleteReply = (id) => {
+        if (window.confirm("Are you sure you want to delete this reply?")) {
+            const updatedTickets = tickets.filter(ticket => ticket.id !== id);
+            setTickets(updatedTickets);
+            localStorage.setItem('ticketReplies', JSON.stringify(updatedTickets));
+            toast.success("Reply deleted successfully!");
         }
     };
 
@@ -157,9 +139,20 @@ export default function UserTicketReplies() {
                                         <h3 className="text-lg font-semibold">{ticket.topic}</h3>
                                         <p className="text-blue-100 text-sm">Ticket #{ticket.id}</p>
                                     </div>
-                                    <div className={`flex items-center px-3 py-1 rounded-full border ${getStatusColor(ticket.status)}`}>
-                                        {getStatusIcon(ticket.status)}
-                                        <span className="ml-2 text-xs font-semibold capitalize">{ticket.status.replace('-', ' ')}</span>
+                                    <div className="flex items-center space-x-2">
+                                        <div className={`flex items-center px-3 py-1 rounded-full border ${getStatusColor(ticket.status)}`}>
+                                            {getStatusIcon(ticket.status)}
+                                            <span className="ml-2 text-xs font-semibold capitalize">{ticket.status.replace('-', ' ')}</span>
+                                        </div>
+                                        <button
+                                            onClick={() => handleDeleteReply(ticket.id)}
+                                            className="text-red-200 hover:text-white transition-colors"
+                                            title="Delete reply"
+                                        >
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -240,6 +233,7 @@ export default function UserTicketReplies() {
                         </div>
                         <h3 className="text-lg font-medium text-gray-900 mb-2">No Support Tickets</h3>
                         <p className="text-gray-500">You haven't submitted any support requests yet.</p>
+                        <p className="text-sm text-gray-400 mt-2">Submit a reply to a ticket to see it here.</p>
                     </div>
                 )}
             </div>
