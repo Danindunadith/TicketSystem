@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom"; // <-- import useParams
 import { toast } from "react-hot-toast";
 import axios from "axios";
+import emailjs from '@emailjs/browser';
 
 export default function ReplyTicket() {
     const navigate = useNavigate();
@@ -16,6 +17,36 @@ export default function ReplyTicket() {
         ticketId: id // <-- store ticketId in formData
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // EmailJS configuration - Replace with your actual values
+    const EMAILJS_SERVICE_ID = 'service_jrj10f4';
+    const EMAILJS_TEMPLATE_ID = 'template_sgsv8w9'; // You may want a separate template to replies
+    const EMAILJS_PUBLIC_KEY = 'KHn7-uw2zB2TcNn3K';
+
+    useEffect(() => {
+        emailjs.init(EMAILJS_PUBLIC_KEY);
+    }, []);
+
+    // Function to send reply confirmation email
+    const sendReplyEmail = async () => {
+        try {
+            const templateParams = {
+                to_email: formData.userEmail,
+                ticketId: String(formData.ticketId),
+                topic: formData.topic,
+                reply: formData.reply
+            };
+            await emailjs.send(
+                EMAILJS_SERVICE_ID,
+                EMAILJS_TEMPLATE_ID,
+                templateParams
+            );
+            toast.success("Reply confirmation email sent to user!");
+        } catch (error) {
+            console.error('Reply email sending failed:', error);
+            toast.error("Failed to send reply confirmation email, but reply was submitted.");
+        }
+    };
 
     // Handle form input changes
     const handleInputChange = (e) => {
@@ -34,15 +65,18 @@ export default function ReplyTicket() {
             toast.error("Please enter a reply message");
             return;
         }
-
+        if (!formData.userEmail.trim()) {
+            toast.error("Please enter the user's email address");
+            return;
+        }
         setIsSubmitting(true);
-
         try {
             await axios.post(
                 `${import.meta.env.VITE_BACKEND_URL}/api/reticket/replyticket`,
                 formData
             );
             toast.success("Reply sent successfully!");
+            await sendReplyEmail();
             navigate(-1); // Go back or redirect as needed
         } catch (err) {
             toast.error("Failed to send reply");
@@ -174,6 +208,23 @@ export default function ReplyTicket() {
                             <div className="mt-2 text-sm text-gray-500">
                                 Update the status based on the current state of the ticket
                             </div>
+                        </div>
+
+                        {/* User Email Section */}
+                        <div>
+                            <label htmlFor="userEmail" className="block text-sm font-semibold text-gray-700 mb-2">
+                                User Email Address *
+                            </label>
+                            <input
+                                type="email"
+                                id="userEmail"
+                                name="userEmail"
+                                value={formData.userEmail}
+                                onChange={handleInputChange}
+                                required
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                placeholder="Enter user's email address"
+                            />
                         </div>
 
                         {/* Action Buttons */}

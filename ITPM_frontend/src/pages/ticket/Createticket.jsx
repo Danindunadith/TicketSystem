@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import toast from "react-hot-toast";
+import emailjs from '@emailjs/browser';
 
 export default function CreateTicketPage() {
   const [formData, setFormData] = useState({
@@ -22,6 +23,18 @@ export default function CreateTicketPage() {
   const [suggestedPriority, setSuggestedPriority] = useState(null);
   const navigate = useNavigate();
 
+  // EmailJS configuration - Replace with your actual values
+  const EMAILJS_SERVICE_ID = 'service_jrj10f4';
+  const EMAILJS_TEMPLATE_ID = 'template_l0ctqxs';
+  const EMAILJS_PUBLIC_KEY = 'KHn7-uw2zB2TcNn3K';
+
+  // Initialize EmailJS
+  useEffect(() => {
+    emailjs.init(EMAILJS_PUBLIC_KEY);
+  }, []);
+
+  // Your Hugging Face API token
+  //const HF_API_TOKEN = process.env.REACT_APP_HF_API_TOKEN; 
   
 
   const handleChange = (e) => {
@@ -35,6 +48,34 @@ export default function CreateTicketPage() {
     if (name === "statement" && value !== formData.statement) {
       setSentimentResult(null);
       setSuggestedPriority(null);
+    }
+  };
+
+  // Function to send confirmation email
+  const sendConfirmationEmail = async (ticketId) => {
+    try {
+      const templateParams = {
+        to_name: formData.name,
+        to_email: formData.email,
+        ticketId: String(ticketId),
+        subject: formData.subject,
+        department: formData.department,
+        priority: formData.priority,
+        reply_to: 'support@yourcompany.com' // Replace with your support email
+      };
+
+      console.log("Sending email with params:", templateParams);
+
+      await emailjs.send(
+        EMAILJS_SERVICE_ID,
+        EMAILJS_TEMPLATE_ID,
+        templateParams
+      );
+
+      toast.success("Confirmation email sent successfully!");
+    } catch (error) {
+      console.error('Email sending failed:', error);
+      toast.error("Failed to send confirmation email, but ticket was created successfully.");
     }
   };
 
@@ -141,8 +182,22 @@ export default function CreateTicketPage() {
           "Content-Type": "multipart/form-data"
         }
       });
+
+      console.log("Ticket creation response:", response.data);
+
+      // Extract ticket ID from response (adjust based on your API response structure)
+      const ticket = response.data;
+      const ticketId = ticket.ticketid || ticket._id || ticket.id || 'TK' + Date.now();
+      
+      console.log("Extracted Ticket ID:", ticketId);
+
       toast.success("Ticket created successfully!");
+      
+      // Send confirmation email
+      await sendConfirmationEmail(ticketId);
+      
       navigate("/");
+      
     } catch (err) {
       console.error("Error details:", err.response);
       toast.error(err?.response?.data?.message || "An error occurred while creating the ticket");
