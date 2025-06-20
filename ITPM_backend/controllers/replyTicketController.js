@@ -3,8 +3,8 @@ import ReplyTicket from "../models/replyTicket.js";
 // Create a reply
 export const createReply = async (req, res) => {
   try {
-    const { topic, reply, status, ticketId } = req.body;
-    const newReply = new ReplyTicket({ topic, reply, status, ticketId });
+    const { topic, reply, status, ticketId, userEmail } = req.body;
+    const newReply = new ReplyTicket({ topic, reply, status, ticketId, userEmail });
     await newReply.save();
     res.status(201).json(newReply);
   } catch (error) {
