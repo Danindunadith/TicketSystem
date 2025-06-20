@@ -20,7 +20,7 @@ export default function ReplyTicket() {
 
     // EmailJS configuration - Replace with your actual values
     const EMAILJS_SERVICE_ID = 'service_jrj10f4';
-    const EMAILJS_TEMPLATE_ID = 'template_sgsv8w9'; // You may want a separate template for replies
+    const EMAILJS_TEMPLATE_ID = 'template_sgsv8w9'; // You may want a separate template to replies
     const EMAILJS_PUBLIC_KEY = 'KHn7-uw2zB2TcNn3K';
 
     useEffect(() => {
