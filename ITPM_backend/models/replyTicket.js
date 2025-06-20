@@ -17,7 +17,11 @@ const replyTicketSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "Ticket",
     required: true,
-  }
+  },
+  userEmail: {
+    type: String,
+    required: true,
+  },
 }, { timestamps: true });
 
 const ReplyTicket = mongoose.model("ReplyTicket", replyTicketSchema);
