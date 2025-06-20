@@ -35,6 +35,7 @@ export default function CreateTicketPage() {
 
   // Your Hugging Face API token
   //const HF_API_TOKEN = process.env.REACT_APP_HF_API_TOKEN; 
+  
 
   const handleChange = (e) => {
     const { name, value, files } = e.target;
