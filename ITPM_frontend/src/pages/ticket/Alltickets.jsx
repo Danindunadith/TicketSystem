@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -40,6 +40,74 @@ export default function AllTicketsPage() {
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
+
+  // Function to group tickets by date
+  const groupTicketsByDate = (tickets) => {
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const groups = {
+      today: [],
+      yesterday: [],
+      thisWeek: [],
+      older: []
+    };
+
+    tickets.forEach(ticket => {
+      const ticketDate = new Date(ticket.date);
+      const ticketDateOnly = new Date(ticketDate.getFullYear(), ticketDate.getMonth(), ticketDate.getDate());
+      const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const yesterdayOnly = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
+
+      if (ticketDateOnly.getTime() === todayOnly.getTime()) {
+        groups.today.push(ticket);
+      } else if (ticketDateOnly.getTime() === yesterdayOnly.getTime()) {
+        groups.yesterday.push(ticket);
+      } else if (ticketDateOnly >= new Date(today.getFullYear(), today.getMonth(), today.getDate() - 7)) {
+        groups.thisWeek.push(ticket);
+      } else {
+        groups.older.push(ticket);
+      }
+    });
+
+    return groups;
+  };
+
+  // Function to get date group label
+  const getDateGroupLabel = (groupKey) => {
+    switch (groupKey) {
+      case 'today':
+        return 'Today';
+      case 'yesterday':
+        return 'Yesterday';
+      case 'thisWeek':
+        return 'This Week';
+      case 'older':
+        return 'Older';
+      default:
+        return '';
+    }
+  };
+
+  // Function to get date group styling
+  const getDateGroupStyling = (groupKey) => {
+    switch (groupKey) {
+      case 'today':
+        return 'bg-green-400 border-green-200 text-green-800';
+      case 'yesterday':
+        return 'bg-blue-400 border-blue-200 text-blue-800';
+      case 'thisWeek':
+        return 'bg-yellow-400 border-yellow-200 text-yellow-800';
+      case 'older':
+        return 'bg-black-400 border-gray-200 text-gray-600';
+      default:
+        return 'bg-gray-50 border-gray-200 text-gray-600';
+    }
+  };
+
+  // Get grouped tickets
+  const groupedTickets = groupTicketsByDate(tickets);
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -131,60 +199,79 @@ export default function AllTicketsPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {tickets.map((ticket, index) => (
-                    <tr 
-                      key={ticket._id} 
-                      className="hover:bg-gray-50 transition-colors duration-200"
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-[#1A69A7]">
-                          #{ticket._id.slice(-6).toUpperCase()}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm font-medium text-gray-900 max-w-xs">
-                          {ticket.subject}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{ticket.name}</div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-600 max-w-xs truncate">
-                          {ticket.email}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{ticket.department}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getPriorityColor(ticket.priority)}`}>
-                          {ticket.priority || 'Normal'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-600">
-                          {new Date(ticket.date).toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric'
-                          })}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <button
-                          onClick={() => handleViewDetails(ticket._id)}
-                          className="inline-flex items-center px-4 py-2 bg-[#1A69A7] hover:bg-[#145a92] text-white text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#1A69A7] focus:ring-offset-2"
-                        >
-                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
-                          View Details
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {Object.entries(groupedTickets).map(([groupKey, groupTickets]) => {
+                    if (groupTickets.length === 0) return null;
+                    
+                    return (
+                      <React.Fragment key={groupKey}>
+                        {/* Date Group Header */}
+                        <tr className={`${getDateGroupStyling(groupKey)}`}>
+                          <td colSpan="8" className="px-6 py-3">
+                            <div className="flex items-center">
+                              <span className="text-sm font-semibold">
+                                {getDateGroupLabel(groupKey)} ({groupTickets.length} {groupTickets.length === 1 ? 'ticket' : 'tickets'})
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                        {/* Tickets in this group */}
+                        {groupTickets.map((ticket, index) => (
+                          <tr 
+                            key={ticket._id} 
+                            className="hover:bg-gray-50 transition-colors duration-200"
+                          >
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm font-medium text-[#1A69A7]">
+                                #{ticket._id.slice(-6).toUpperCase()}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="text-sm font-medium text-gray-900 max-w-xs">
+                                {ticket.subject}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">{ticket.name}</div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="text-sm text-gray-600 max-w-xs truncate">
+                                {ticket.email}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">{ticket.department}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getPriorityColor(ticket.priority)}`}>
+                                {ticket.priority || 'Normal'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-600">
+                                {new Date(ticket.date).toLocaleDateString('en-US', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric'
+                                })}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <button
+                                onClick={() => handleViewDetails(ticket._id)}
+                                className="inline-flex items-center px-4 py-2 bg-[#1A69A7] hover:bg-[#145a92] text-white text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#1A69A7] focus:ring-offset-2"
+                              >
+                                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                                View Details
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </React.Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
