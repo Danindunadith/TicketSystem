@@ -17,10 +17,8 @@ export default function CreateTicketPage() {
     statement: ""
   });
   const [loading, setLoading] = useState(false);
-  const [analyzing, setAnalyzing] = useState(false);
-  const [sentimentResult, setSentimentResult] = useState(null);
-  const [sentimentScore, setSentimentScore] = useState(null);
-  const [suggestedPriority, setSuggestedPriority] = useState(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisResults, setAnalysisResults] = useState(null);
   const navigate = useNavigate();
 
   // EmailJS configuration - Replace with your actual values
@@ -33,9 +31,6 @@ export default function CreateTicketPage() {
     emailjs.init(EMAILJS_PUBLIC_KEY);
   }, []);
 
-  // Your Hugging Face API token
-  //const HF_API_TOKEN = process.env.REACT_APP_HF_API_TOKEN; 
-
   const handleChange = (e) => {
     const { name, value, files } = e.target;
     setFormData({
@@ -43,10 +38,9 @@ export default function CreateTicketPage() {
       [name]: files ? files[0] : value
     });
     
-    // Reset sentiment analysis when statement changes
-    if (name === "statement" && value !== formData.statement) {
-      setSentimentResult(null);
-      setSuggestedPriority(null);
+    // Reset sentiment analysis when important fields change
+    if (["statement", "subject", "department", "relatedservice"].includes(name)) {
+      setAnalysisResults(null);
     }
   };
 
@@ -78,76 +72,42 @@ export default function CreateTicketPage() {
     }
   };
 
-  // Analyze sentiment when statement has sufficient content
-  useEffect(() => {
-    const analyzeSentiment = async () => {
-      // Only analyze if there's sufficient text (20+ characters)
-      if (formData.statement && formData.statement.trim().length > 20) {
-        setAnalyzing(true);
-        try {
-          // Call Hugging Face API for sentiment analysis
-          const response = await axios.post(
-            "https://api-inference.huggingface.co/models/distilbert-base-uncased-finetuned-sst-2-english",
-            {
-              inputs: formData.statement
-            },
-            {
-              headers: {
-                Authorization: `Bearer ${HF_API_TOKEN}`,
-                "Content-Type": "application/json"
-              }
-            }
-          );
-          
-          setSentimentResult(response.data[0]);
-          
-          // Find negative sentiment score
-          let negativeScore = 0;
-          for (const result of response.data[0]) {
-            if (result.label === "NEGATIVE") {
-              negativeScore = result.score;
-              break;
-            }
-          }
-          
-          setSentimentScore(negativeScore);
-          
-          // Determine suggested priority based on negative sentiment score
-          let priority;
-          if (negativeScore > 0.9) {
-            priority = "Urgent";
-          } else if (negativeScore > 0.7) {
-            priority = "High";
-          } else if (negativeScore > 0.4) {
-            priority = "Medium";
-          } else {
-            priority = "Low";
-          }
-          
-          setSuggestedPriority(priority);
-        } catch (error) {
-          console.error("Error analyzing sentiment:", error);
-        } finally {
-          setAnalyzing(false);
-        }
-      }
-    };
-    
-    // Debounce the analysis to avoid too many API calls
-    const timerId = setTimeout(() => {
-      analyzeSentiment();
-    }, 1000);
-    
-    return () => clearTimeout(timerId);
-  }, [formData.statement]);
+  // Handle AI Analysis button click
+  const handleAIAnalysis = async () => {
+    // Validate if required fields are filled
+    if (!formData.subject || !formData.statement) {
+      toast.error("Please fill in at least the subject and detailed description");
+      return;
+    }
 
-  // Apply the suggested priority from AI
-  const applySuggestedPriority = () => {
-    setFormData({
-      ...formData,
-      priority: suggestedPriority
-    });
-    toast.success(`AI suggestion applied: ${suggestedPriority} priority`);
+    setIsAnalyzing(true);
+
+    try {
+      const response = await axios.post(
+        `/api/analysis/sentiment`,
+        {
+          subject: formData.subject,
+          department: formData.department,
+          relatedService: formData.relatedservice,
+          description: formData.statement
+        }
+      );
+      
+      setAnalysisResults(response.data);
+      
+      // Automatically update the priority based on sentiment analysis
+      setFormData(prev => ({
+        ...prev,
+        priority: response.data.priority
+      }));
+      
+      toast.success("AI analysis completed successfully");
+    } catch (error) {
+      console.error("AI analysis error:", error);
+      toast.error("Failed to analyze ticket content");
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -171,9 +131,10 @@ export default function CreateTicketPage() {
       }
       formDataToSend.append("statement", formData.statement);
       
-      // Include sentiment score if available
-      if (sentimentScore !== null) {
-        formDataToSend.append("sentimentScore", sentimentScore);
+      // Include sentiment data if available
+      if (analysisResults) {
+        formDataToSend.append("sentimentScore", analysisResults.score);
+        formDataToSend.append("suggestedSolution", analysisResults.suggestedSolution || "");
       }
 
       const response = await axios.post(apiUrl, formDataToSend, {
@@ -207,7 +168,7 @@ export default function CreateTicketPage() {
 
   const getPriorityColor = (priority) => {
     switch (priority) {
-      case 'Urgent': return 'text-red-600 bg-red-50 border-red-200';
+      case 'Critical': return 'text-red-600 bg-red-50 border-red-200';
       case 'High': return 'text-orange-600 bg-orange-50 border-orange-200';
       case 'Medium': return 'text-yellow-600 bg-yellow-50 border-yellow-200';
       case 'Low': return 'text-green-600 bg-green-50 border-green-200';
@@ -341,24 +302,31 @@ export default function CreateTicketPage() {
                     onChange={handleChange}
                   />
                 </div>
+
+                {/* Priority Display (Read-Only) - Now determined by AI */}
                 <div>
-                  <label htmlFor="priority" className="block text-sm font-medium text-gray-700 mb-2">
-                    Priority Level <span className="text-red-500">*</span>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Priority Level
                   </label>
-                  <select
-                    id="priority"
-                    name="priority"
-                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${getPriorityColor(formData.priority)}`}
-                    required
-                    value={formData.priority}
-                    onChange={handleChange}
-                  >
-                    <option value="" disabled>Select priority level</option>
-                    <option value="Low">🟢 Low - General inquiry</option>
-                    <option value="Medium">🟡 Medium - Standard request</option>
-                    <option value="High">🟠 High - Important issue</option>
-                    <option value="Urgent">🔴 Urgent - Critical issue</option>
-                  </select>
+                  {formData.priority ? (
+                    <div className={`px-3 py-2 rounded-md border ${getPriorityColor(formData.priority)}`}>
+                      <div className="flex items-center">
+                        <span className={`w-3 h-3 rounded-full mr-2 ${
+                          formData.priority === 'Low' ? 'bg-green-500' : 
+                          formData.priority === 'Medium' ? 'bg-yellow-500' : 
+                          formData.priority === 'High' ? 'bg-orange-500' : 
+                          'bg-red-500'
+                        }`}></span>
+                        <span>{formData.priority}</span>
+                        {analysisResults && <span className="text-xs text-gray-500 ml-auto">AI determined</span>}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="px-3 py-2 rounded-md border border-gray-300 text-gray-500">
+                      Will be determined by AI analysis
+                    </div>
+                  )}
+                  <input type="hidden" name="priority" value={formData.priority} />
                 </div>
               </div>
               
@@ -442,65 +410,6 @@ export default function CreateTicketPage() {
                   Tip: Include error messages, screenshots, and steps you've already tried
                 </p>
               </div>
-              
-              {/* AI Sentiment Analysis Section */}
-              {formData.statement && formData.statement.trim().length > 20 && (
-                <div className="mt-4 mb-6">
-                  {analyzing ? (
-                    <div className="flex items-center text-sm text-gray-500">
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-500" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      AI is analyzing your ticket text...
-                    </div>
-                  ) : sentimentResult && (
-                    <div className="rounded-lg border bg-gray-50 p-4">
-                      <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
-                        <svg className="w-4 h-4 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                        </svg>
-                        AI Sentiment Analysis
-                      </h4>
-                      
-                      {sentimentScore !== null && (
-                        <div className="mb-3">
-                          <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
-                            <div 
-                              className={`h-full ${sentimentScore > 0.7 ? 'bg-red-500' : sentimentScore > 0.4 ? 'bg-yellow-500' : 'bg-green-500'}`}
-                              style={{ width: `${sentimentScore * 100}%` }}
-                            ></div>
-                          </div>
-                          <div className="flex justify-between mt-1 text-xs text-gray-500">
-                            <span>Positive</span>
-                            <span>Neutral</span>
-                            <span>Negative</span>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {suggestedPriority && (
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm text-gray-600">
-                              AI suggests <span className={`font-semibold ${getPriorityColor(suggestedPriority).replace('bg-', 'text-').replace('-50', '-600')}`}>
-                                {suggestedPriority} priority
-                              </span> based on your description.
-                            </p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={applySuggestedPriority}
-                            className="px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded text-sm font-medium"
-                          >
-                            Apply Suggestion
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
 
               <div>
                 <label htmlFor="attachment" className="block text-sm font-medium text-gray-700 mb-2">
@@ -537,6 +446,90 @@ export default function CreateTicketPage() {
                   </div>
                 )}
               </div>
+              
+              {/* AI Analysis Button - Added below attachment section */}
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <h3 className="text-md font-medium text-gray-900 mb-4 flex items-center">
+                  <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                  AI Generated Analysis
+                </h3>
+                <button
+                  type="button"
+                  onClick={handleAIAnalysis}
+                  disabled={isAnalyzing || !formData.subject || !formData.statement}
+                  className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-300 disabled:cursor-not-allowed"
+                >
+                  {isAnalyzing ? (
+                    <div className="flex items-center justify-center">
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Analyzing Ticket...
+                    </div>
+                  ) : (
+                    "Generate AI Analysis"
+                  )}
+                </button>
+                
+                {/* Analysis Results */}
+                {analysisResults && (
+                  <div className="mt-4 bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <div className="mb-4">
+                      <h4 className="text-sm font-semibold text-gray-700">Sentiment Analysis</h4>
+                      <div className="flex items-center mt-1">
+                        <div className={`w-3 h-3 rounded-full mr-2 ${
+                          analysisResults.sentiment === 'POSITIVE' ? 'bg-green-500' : 
+                          analysisResults.sentiment === 'NEGATIVE' ? 'bg-red-500' : 'bg-yellow-500'
+                        }`}></div>
+                        <span className="text-sm text-gray-600">{analysisResults.sentiment}</span>
+                      </div>
+                      
+                      {/* Score visualization */}
+                      <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+                        <div 
+                          className={`h-2.5 rounded-full ${
+                            analysisResults.sentiment === 'POSITIVE' ? 'bg-green-500' : 
+                            analysisResults.sentiment === 'NEGATIVE' ? 'bg-red-500' : 'bg-yellow-500'
+                          }`}
+                          style={{width: `${analysisResults.score * 100}%`}}
+                        ></div>
+                      </div>
+                      <div className="mt-1 flex justify-between text-xs text-gray-500">
+                        <span>Low</span>
+                        <span>Medium</span>
+                        <span>High</span>
+                      </div>
+                    </div>
+                    
+                    <div className="mb-4">
+                      <h4 className="text-sm font-semibold text-gray-700">Suggested Priority</h4>
+                      <div className={`mt-1 px-3 py-2 rounded-md border ${getPriorityColor(analysisResults.priority)}`}>
+                        <div className="flex items-center">
+                          <span className={`w-3 h-3 rounded-full mr-2 ${
+                            analysisResults.priority === 'Low' ? 'bg-green-500' : 
+                            analysisResults.priority === 'Medium' ? 'bg-yellow-500' : 
+                            analysisResults.priority === 'High' ? 'bg-orange-500' : 
+                            'bg-red-500'
+                          }`}></span>
+                          <span>{analysisResults.priority}</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {analysisResults.suggestedSolution && (
+                      <div>
+                        <h4 className="text-sm font-semibold text-gray-700">Suggested Solution</h4>
+                        <div className="mt-1 p-3 bg-white rounded border border-gray-200 text-sm">
+                          {analysisResults.suggestedSolution}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Form Actions */}
@@ -547,7 +540,7 @@ export default function CreateTicketPage() {
               <div className="flex space-x-3">
                 <button
                   type="button"
-                  onClick={() => navigate("/tickets")}
+                  onClick={() => navigate("/")}
                   className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
                   Cancel
