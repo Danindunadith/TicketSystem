@@ -98,9 +98,9 @@ export default function AllTicketsPage() {
       case 'yesterday':
         return 'bg-blue-400 border-blue-200 text-blue-800';
       case 'thisWeek':
-        return 'bg-yellow-400 border-yellow-200 text-yellow-800';
+        return 'bg-yellow-400 border-yellow-400 text-yellow-400';
       case 'older':
-        return 'bg-black-400 border-gray-200 text-gray-600';
+        return 'bg-gray-400 border-gray-200 text-gray-600';
       default:
         return 'bg-gray-50 border-gray-200 text-gray-600';
     }
