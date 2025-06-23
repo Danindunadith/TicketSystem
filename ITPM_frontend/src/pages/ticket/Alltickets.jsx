@@ -121,7 +121,7 @@ export default function AllTicketsPage() {
       case 'thisWeek':
         return 'bg-yellow-400 border-yellow-200 text-yellow-800';
       case 'older':
-        return 'bg-gray-400 border-gray-200 text-gray-600';
+        return 'bg-gray-400 border-gray-200 text-gray-800';
       default:
         return 'bg-gray-50 border-gray-200 text-gray-600';
     }
