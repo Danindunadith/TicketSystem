@@ -40,6 +40,9 @@ export default function UserTicketReplies() {
         ).then(repliesWithStatements => setTickets(repliesWithStatements));
     }, [replies]);
 
+    // Sort tickets by reply createdAt descending (newest first)
+    const sortedTickets = [...tickets].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
     // Helper function to format dates
     const formatDate = (dateString) => {
         if (!dateString) return "";
@@ -114,7 +117,7 @@ export default function UserTicketReplies() {
 
                 {/* Replies List */}
                 <div className="space-y-6">
-                    {tickets.map((reply) => (
+                    {sortedTickets.map((reply) => (
                         <div key={reply._id} className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
                             {/* Ticket Header */}
                             <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
