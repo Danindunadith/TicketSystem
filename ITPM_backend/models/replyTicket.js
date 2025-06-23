@@ -18,7 +18,15 @@ const replyTicketSchema = new mongoose.Schema({
     ref: "Ticket",
     required: true,
   },
-  userEmail: {
+  userSendEmail: {
+    type: String,
+    required: true,
+  },
+  firstName: {
+    type: String,
+    required: true,
+  },
+  email: {
     type: String,
     required: true,
   },

@@ -3,6 +3,7 @@ import { useNavigate, useLocation, useParams } from "react-router-dom"; // <-- i
 import { toast } from "react-hot-toast";
 import axios from "axios";
 import emailjs from '@emailjs/browser';
+import { jwtDecode } from "jwt-decode";
 
 export default function ReplyTicket() {
     const navigate = useNavigate();
@@ -31,7 +32,7 @@ export default function ReplyTicket() {
     const sendReplyEmail = async () => {
         try {
             const templateParams = {
-                to_email: formData.userEmail,
+                to_email: formData.userSendEmail,
                 ticketId: String(formData.ticketId),
                 topic: formData.topic,
                 reply: formData.reply
@@ -65,15 +66,35 @@ export default function ReplyTicket() {
             toast.error("Please enter a reply message");
             return;
         }
-        if (!formData.userEmail.trim()) {
+        if (!formData.userSendEmail.trim()) {
             toast.error("Please enter the user's email address");
             return;
         }
         setIsSubmitting(true);
+
+        // Get token from localStorage
+        const token = localStorage.getItem("token");
+        console.log("Token used for reply submission:", token); // <-- Add this line
+
         try {
+            // Decode token to get user information (e.g., email)
+            const decoded = jwtDecode(token);
+            console.log("Decoded token payload:", decoded); // See all info in the token
+            // Example: get firstName if present
+            // const firstName = decoded.firstName;
+
             await axios.post(
                 `${import.meta.env.VITE_BACKEND_URL}/api/reticket/replyticket`,
-                formData
+                {
+                    ...formData,
+                    firstName: decoded.firstName,
+                    email: decoded.email
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
             );
             toast.success("Reply sent successfully!");
             await sendReplyEmail();
@@ -212,14 +233,14 @@ export default function ReplyTicket() {
 
                         {/* User Email Section */}
                         <div>
-                            <label htmlFor="userEmail" className="block text-sm font-semibold text-gray-700 mb-2">
+                            <label htmlFor="userSendEmail" className="block text-sm font-semibold text-gray-700 mb-2">
                                 User Email Address *
                             </label>
                             <input
                                 type="email"
-                                id="userEmail"
-                                name="userEmail"
-                                value={formData.userEmail}
+                                id="userSendEmail"
+                                name="userSendEmail"
+                                value={formData.userSendEmail}
                                 onChange={handleInputChange}
                                 required
                                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
