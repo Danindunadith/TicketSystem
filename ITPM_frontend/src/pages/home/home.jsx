@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BookOpen, CheckCircle, Clock, Shield, Star, ArrowRight, Menu, X } from 'lucide-react';
+import ChatBot from '../../components/ChatBot';
 
 export default function Home() {
   const [isVisible, setIsVisible] = useState(false);
@@ -250,6 +251,9 @@ export default function Home() {
       </div>
 
       {/* CTA Section */}
+
+      {/* Add ChatBot component */}
+      <ChatBot />
       
     </div>
   );
