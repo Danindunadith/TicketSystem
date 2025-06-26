@@ -56,6 +56,55 @@ const ticketSchema = new mongoose.Schema({
         type: Date,
         default: null
     },
+    // Enhanced AI fields for predictive categorization
+    aiPredictedCategory: {
+        type: String,
+        default: null
+    },
+    categoryConfidence: {
+        type: Number,
+        default: null
+    },
+    automatedResponse: {
+        type: String,
+        default: null
+    },
+    estimatedResolutionTime: {
+        type: String,
+        default: null
+    },
+    detectedEmotion: {
+        type: String,
+        default: null
+    },
+    emotionIntensity: {
+        type: Number,
+        default: null
+    },
+    supportAction: {
+        type: String,
+        default: null
+    },
+    aiInsights: {
+        type: Object,
+        default: null
+    },
+    // Flag for tickets that received automated solutions
+    hasAutomatedSolution: {
+        type: Boolean,
+        default: false
+    },
+    // Track if customer tried automated solution before creating ticket
+    automatedSolutionAttempted: {
+        type: Boolean,
+        default: false
+    },
+    // Customer satisfaction after automated response
+    automatedSolutionSatisfaction: {
+        type: String,
+        enum: ["satisfied", "needs_more_help", "escalated", null],
+        default: null
+    },
     status: {
         type: String,
         default: "Open",

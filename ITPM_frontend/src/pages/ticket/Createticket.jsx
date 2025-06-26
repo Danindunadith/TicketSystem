@@ -2,45 +2,93 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import toast from "react-hot-toast";
-import emailjs from '@emailjs/browser';
+
+// EmailJS Configuration
+const EMAILJS_CONFIG = {
+  SERVICE_ID: 'service_jrj10f4',
+  TEMPLATE_ID: 'template_l0ctqxs',
+  PUBLIC_KEY: 'KHn7-uw2zB2TcNn3K'
+};
+
+// Email confirmation function
+const sendTicketConfirmationEmail = async (ticketData) => {
+  try {
+    const emailjs = await import('@emailjs/browser');
+
+    const templateParams = {
+      to_email: ticketData.email,
+      to_name: ticketData.name,
+      ticket_id: ticketData.ticketId,
+      subject: ticketData.subject,
+      department: ticketData.department,
+      priority: ticketData.priority,
+      date: ticketData.date,
+      statement: ticketData.statement,
+      ai_category: ticketData.aiPredictedCategory || 'Not specified',
+      automated_response: ticketData.automatedResponse || 'No automated response available',
+      reply_to: 'support@yourcompany.com'
+    };
+
+    const result = await emailjs.default.send(
+      EMAILJS_CONFIG.SERVICE_ID,
+      EMAILJS_CONFIG.TEMPLATE_ID,
+      templateParams,
+      EMAILJS_CONFIG.PUBLIC_KEY
+    );
+
+    console.log('Email sent successfully:', result);
+    return { success: true, result };
+  } catch (error) {
+    console.error('Email sending failed:', error);
+    return { success: false, error: error.message };
+  }
+};
 
 export default function CreateTicketPage() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    date: "",
+    date: new Date().toISOString().split('T')[0],
     subject: "",
     department: "",
     relatedservice: "",
     priority: "",
     attachment: null,
-    statement: ""
+    statement: "",
+    aiPredictedCategory: "",
+    automatedResponse: ""
   });
   const [loading, setLoading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResults, setAnalysisResults] = useState(null);
-  const navigate = useNavigate();
-
-  // EmailJS configuration - Replace with your actual values
-  const EMAILJS_SERVICE_ID = 'service_jrj10f4';
-  const EMAILJS_TEMPLATE_ID = 'template_l0ctqxs';
-  const EMAILJS_PUBLIC_KEY = 'KHn7-uw2zB2TcNn3K';
-
-  // Initialize EmailJS
-  useEffect(() => {
-    emailjs.init(EMAILJS_PUBLIC_KEY);
-  }, []);
-
-  // Your Hugging Face API token
-  //const HF_API_TOKEN = process.env.REACT_APP_HF_API_TOKEN; 
+  const navigate = useNavigate(); 
   
 
   const handleChange = (e) => {
     const { name, value, files } = e.target;
-    setFormData({
+    let updatedFormData = {
       ...formData,
       [name]: files ? files[0] : value
-    });
+    };
+    
+    // Auto-detect department and related service when subject or statement changes
+    if (name === 'subject' || name === 'statement') {
+      const subject = name === 'subject' ? value : formData.subject;
+      const statement = name === 'statement' ? value : formData.statement;
+      
+      if (subject && statement) {
+        const detectedDepartment = detectDepartment(subject, statement);
+        const detectedService = detectRelatedService(subject, statement, detectedDepartment);
+        
+        updatedFormData = {
+          ...updatedFormData,
+          department: detectedDepartment,
+          relatedservice: detectedService
+        };
+      }
+    }
+    
+    setFormData(updatedFormData);
     
     // Reset sentiment analysis when important fields change
     if (["statement", "subject", "department", "relatedservice"].includes(name)) {
@@ -48,35 +96,7 @@ export default function CreateTicketPage() {
     }
   };
 
-  // Function to send confirmation email
-  const sendConfirmationEmail = async (ticketId) => {
-    try {
-      const templateParams = {
-        to_name: formData.name,
-        to_email: formData.email,
-        ticketId: String(ticketId),
-        subject: formData.subject,
-        department: formData.department,
-        priority: formData.priority,
-        reply_to: 'support@yourcompany.com' // Replace with your support email
-      };
-
-      console.log("Sending email with params:", templateParams);
-
-      await emailjs.send(
-        EMAILJS_SERVICE_ID,
-        EMAILJS_TEMPLATE_ID,
-        templateParams
-      );
-
-      toast.success("Confirmation email sent successfully!");
-    } catch (error) {
-      console.error('Email sending failed:', error);
-      toast.error("Failed to send confirmation email, but ticket was created successfully.");
-    }
-  };
-
-  // Handle AI Analysis button click
+  // Handle comprehensive AI Analysis with all features matching chatbot
   const handleAIAnalysis = async () => {
     // Validate if required fields are filled
     if (!formData.subject || !formData.statement) {
@@ -87,38 +107,220 @@ export default function CreateTicketPage() {
     setIsAnalyzing(true);
 
     try {
-      const response = await axios.post(
-        `/api/analysis/sentiment`,
-        {
-          subject: formData.subject,
-          department: formData.department,
-          relatedService: formData.relatedservice,
-          description: formData.statement
-        }
-      );
+      const fullMessage = `${formData.subject}. ${formData.statement}`;
       
-      setAnalysisResults(response.data);
+      // Run comprehensive AI analysis (same as chatbot)
+      const [ticketAnalysis, emotionAnalysis] = await Promise.all([
+        axios.post(`http://localhost:3002/api/ai/analyze-ticket`, {
+          message: fullMessage,
+          category: null // Let AI predict the category
+        }),
+        axios.post(`http://localhost:3002/api/ai/analyze-emotion`, {
+          text: fullMessage
+        })
+      ]);
       
-      // Automatically update the priority based on sentiment analysis
-      setFormData(prev => ({
-        ...prev,
-        priority: response.data.priority
-      }));
+      if (ticketAnalysis.data.success) {
+        const aiResults = ticketAnalysis.data;
+        const emotionResults = emotionAnalysis.data;
+        
+        // Comprehensive results matching chatbot functionality
+        const comprehensiveResults = {
+          // Basic sentiment analysis
+          sentiment: aiResults.analysis.sentiment.label,
+          sentimentScore: aiResults.analysis.sentiment.score,
+          
+          // Category prediction
+          predictedCategory: {
+            category: aiResults.analysis.category,
+            confidence: aiResults.analysis.categoryConfidence
+          },
+          
+          // Priority and urgency
+          aiSuggestedPriority: mapUrgencyToPriority(aiResults.analysis.urgency),
+          urgency: aiResults.analysis.urgency,
+          
+          // Emotion analysis
+          detectedEmotion: emotionResults.primaryEmotion,
+          emotionIntensity: emotionResults.intensity,
+          emotions: emotionResults.emotions,
+          
+          // AI-generated content
+          automatedResponse: aiResults.response,
+          estimatedResolutionTime: aiResults.analysis.estimatedResolution,
+          supportAction: emotionResults.supportAction?.action,
+          
+          // Additional insights
+          chatbotSuggestions: aiResults.suggestions,
+          shouldEscalate: emotionResults.supportAction?.escalate || false,
+          
+          // AI insights object
+          aiInsights: {
+            categoryConfidence: aiResults.analysis.categoryConfidence,
+            sentimentScore: aiResults.analysis.sentiment.score,
+            emotionBreakdown: emotionResults.emotions,
+            urgencyReasoning: `Based on sentiment (${aiResults.analysis.sentiment.label}) and category (${aiResults.analysis.category})`,
+            escalationRecommended: emotionResults.supportAction?.escalate || false,
+            estimatedResolution: aiResults.analysis.estimatedResolution,
+            automationAttempted: true,
+            analysisTimestamp: new Date().toISOString()
+          }
+        };
+        
+        setAnalysisResults(comprehensiveResults);
+        
+        // Update the priority based on AI analysis
+        setFormData(prev => ({
+          ...prev,
+          priority: comprehensiveResults.aiSuggestedPriority
+        }));
+        
+        toast.success("Comprehensive AI analysis completed successfully");
+      } else {
+        throw new Error('AI analysis failed');
+      }
       
-      toast.success("AI analysis completed successfully");
     } catch (error) {
       console.error("AI analysis error:", error);
-      toast.error("Failed to analyze ticket content");
+      
+      // Fallback to original analysis endpoints
+      try {
+        const [sentimentResponse, categoryResponse] = await Promise.all([
+          axios.post(`http://localhost:3002/api/analysis/sentiment`, {
+            subject: formData.subject,
+            department: formData.department,
+            relatedService: formData.relatedservice,
+            description: formData.statement
+          }),
+          axios.post(`http://localhost:3002/api/ai/predict-category`, {
+            subject: formData.subject,
+            description: formData.statement,
+            department: formData.department
+          })
+        ]);
+        
+        // Combine fallback results
+        const fallbackResults = {
+          sentiment: sentimentResponse.data.sentiment || 'NEUTRAL',
+          sentimentScore: sentimentResponse.data.score || 0.5,
+          predictedCategory: categoryResponse.data.predictions[0] || { category: 'general inquiry', confidence: 0.5 },
+          aiSuggestedPriority: sentimentResponse.data.priority || 'Medium',
+          automatedResponse: categoryResponse.data.automatedResponse,
+          estimatedResolutionTime: categoryResponse.data.estimatedResolutionTime,
+          detectedEmotion: 'neutral',
+          emotionIntensity: 0.5,
+          supportAction: 'Standard support response',
+          aiInsights: {
+            fallbackMode: true,
+            analysisTimestamp: new Date().toISOString()
+          }
+        };
+        
+        setAnalysisResults(fallbackResults);
+        
+        setFormData(prev => ({
+          ...prev,
+          priority: fallbackResults.aiSuggestedPriority
+        }));
+        
+        toast.success("Fallback AI analysis completed");
+      } catch (fallbackError) {
+        console.error("Fallback analysis error:", fallbackError);
+        toast.error("Failed to analyze ticket content");
+      }
     } finally {
       setIsAnalyzing(false);
     }
+  };
+
+  // Helper function to map urgency levels to priority
+  const mapUrgencyToPriority = (urgency) => {
+    switch (urgency) {
+      case 'High': return 'Critical';
+      case 'Medium': return 'High';
+      case 'Low': return 'Medium';
+      default: return 'Medium';
+    }
+  };
+
+  // Smart department detection based on subject and statement
+  const detectDepartment = (subject, statement) => {
+    const text = `${subject} ${statement}`.toLowerCase();
+    
+    // IT Support keywords
+    if (text.includes('login') || text.includes('password') || text.includes('access') || 
+        text.includes('network') || text.includes('email') || text.includes('software') ||
+        text.includes('hardware') || text.includes('computer') || text.includes('system') ||
+        text.includes('server') || text.includes('internet') || text.includes('wifi') ||
+        text.includes('vpn') || text.includes('security') || text.includes('virus') ||
+        text.includes('malware') || text.includes('backup') || text.includes('data') ||
+        text.includes('database') || text.includes('application') || text.includes('website') ||
+        text.includes('browser') || text.includes('error') || text.includes('bug') ||
+        text.includes('installation') || text.includes('configuration') || text.includes('update')) {
+      return 'IT';
+    }
+    
+    // HR keywords
+    if (text.includes('payroll') || text.includes('salary') || text.includes('benefits') ||
+        text.includes('leave') || text.includes('vacation') || text.includes('sick') ||
+        text.includes('employee') || text.includes('staff') || text.includes('hiring') ||
+        text.includes('recruitment') || text.includes('training') || text.includes('performance') ||
+        text.includes('policy') || text.includes('handbook') || text.includes('compliance') ||
+        text.includes('onboarding') || text.includes('termination') || text.includes('discipline')) {
+      return 'HR';
+    }
+    
+    // Finance keywords
+    if (text.includes('invoice') || text.includes('payment') || text.includes('billing') ||
+        text.includes('expense') || text.includes('budget') || text.includes('accounting') ||
+        text.includes('tax') || text.includes('financial') || text.includes('cost') ||
+        text.includes('refund') || text.includes('charge') || text.includes('fee') ||
+        text.includes('bank') || text.includes('credit') || text.includes('debit')) {
+      return 'Finance';
+    }
+    
+    // Default to Support for general inquiries
+    return 'Support';
+  };
+
+  // Smart related service detection
+  const detectRelatedService = (subject, statement, department) => {
+    const text = `${subject} ${statement}`.toLowerCase();
+    
+    if (department === 'IT') {
+      if (text.includes('email') || text.includes('outlook') || text.includes('gmail')) return 'Email';
+      if (text.includes('password') || text.includes('login') || text.includes('access')) return 'Authentication';
+      if (text.includes('network') || text.includes('wifi') || text.includes('internet')) return 'Network';
+      if (text.includes('software') || text.includes('application') || text.includes('program')) return 'Software';
+      if (text.includes('hardware') || text.includes('computer') || text.includes('laptop')) return 'Hardware';
+      if (text.includes('printer') || text.includes('print')) return 'Printer';
+      if (text.includes('phone') || text.includes('mobile') || text.includes('telephone')) return 'Phone';
+      return 'General IT';
+    }
+    
+    if (department === 'HR') {
+      if (text.includes('payroll') || text.includes('salary')) return 'Payroll';
+      if (text.includes('benefits') || text.includes('insurance')) return 'Benefits';
+      if (text.includes('leave') || text.includes('vacation')) return 'Leave Management';
+      if (text.includes('training') || text.includes('development')) return 'Training';
+      return 'General HR';
+    }
+    
+    if (department === 'Finance') {
+      if (text.includes('invoice') || text.includes('billing')) return 'Billing';
+      if (text.includes('expense') || text.includes('reimbursement')) return 'Expenses';
+      if (text.includes('payment') || text.includes('payroll')) return 'Payments';
+      return 'General Finance';
+    }
+    
+    return 'General Support';
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
-    const apiUrl = "/api/tickets/";
+    const apiUrl = "http://localhost:3002/api/tickets/";
     console.log("Sending POST request to:", apiUrl);
 
     try {
@@ -135,10 +337,59 @@ export default function CreateTicketPage() {
       }
       formDataToSend.append("statement", formData.statement);
       
-      // Include sentiment data if available
+      // Include comprehensive AI analysis data if available (same as chatbot)
       if (analysisResults) {
-        formDataToSend.append("sentimentScore", analysisResults.score);
-        formDataToSend.append("suggestedSolution", analysisResults.suggestedSolution || "");
+        // Basic sentiment and category
+        formDataToSend.append("sentimentScore", analysisResults.sentimentScore || analysisResults.score);
+        formDataToSend.append("aiPredictedCategory", analysisResults.predictedCategory?.category || "");
+        formDataToSend.append("categoryConfidence", analysisResults.predictedCategory?.confidence || "");
+        
+        // AI-suggested priority and urgency
+        formDataToSend.append("aiSuggestedPriority", analysisResults.aiSuggestedPriority || analysisResults.priority);
+        
+        // Emotion detection
+        if (analysisResults.detectedEmotion) {
+          formDataToSend.append("detectedEmotion", analysisResults.detectedEmotion);
+        }
+        if (analysisResults.emotionIntensity) {
+          formDataToSend.append("emotionIntensity", analysisResults.emotionIntensity);
+        }
+        
+        // AI-generated content
+        if (analysisResults.automatedResponse) {
+          formDataToSend.append("automatedResponse", analysisResults.automatedResponse);
+        }
+        if (analysisResults.estimatedResolutionTime) {
+          formDataToSend.append("estimatedResolutionTime", analysisResults.estimatedResolutionTime);
+        }
+        if (analysisResults.supportAction) {
+          formDataToSend.append("supportAction", analysisResults.supportAction);
+        }
+        
+        // AI insights and metadata
+        if (analysisResults.aiInsights) {
+          formDataToSend.append("aiInsights", JSON.stringify(analysisResults.aiInsights));
+        }
+        
+        // Automation flags
+        formDataToSend.append("hasAutomatedSolution", "true");
+        formDataToSend.append("automatedSolutionAttempted", "true");
+        
+        // Add timestamp for AI analysis
+        formDataToSend.append("sentimentAnalyzedAt", new Date().toISOString());
+        
+        // Log comprehensive AI data being sent
+        console.log("Comprehensive AI analysis data being sent:", {
+          sentimentScore: analysisResults.sentimentScore || analysisResults.score,
+          aiPredictedCategory: analysisResults.predictedCategory?.category,
+          categoryConfidence: analysisResults.predictedCategory?.confidence,
+          aiSuggestedPriority: analysisResults.aiSuggestedPriority,
+          detectedEmotion: analysisResults.detectedEmotion,
+          emotionIntensity: analysisResults.emotionIntensity,
+          estimatedResolutionTime: analysisResults.estimatedResolutionTime,
+          hasAutomatedSolution: true,
+          automatedSolutionAttempted: true
+        });
       }
 
       const response = await axios.post(apiUrl, formDataToSend, {
@@ -149,7 +400,7 @@ export default function CreateTicketPage() {
 
       console.log("Ticket creation response:", response.data);
 
-      // Extract ticket ID from response (adjust based on your API response structure)
+      // Extract ticket ID from response
       const ticket = response.data;
       const ticketId = ticket.ticketid || ticket._id || ticket.id || 'TK' + Date.now();
       
@@ -157,8 +408,38 @@ export default function CreateTicketPage() {
 
       toast.success("Ticket created successfully!");
       
-      // Send confirmation email
-      await sendConfirmationEmail(ticketId);
+      // Send confirmation email using EmailJS
+      try {
+        const emailResult = await sendTicketConfirmationEmail({
+          email: formData.email,
+          name: formData.name,
+          ticketId: ticketId,
+          subject: formData.subject,
+          department: formData.department,
+          priority: formData.priority,
+          date: formData.date,
+          statement: formData.statement,
+          aiPredictedCategory: formData.aiPredictedCategory,
+          automatedResponse: formData.automatedResponse
+        });
+        
+        if (emailResult.success) {
+          toast.success("Confirmation email sent successfully!");
+        } else {
+          throw new Error(emailResult.error);
+        }
+      } catch (emailError) {
+        console.warn('EmailJS confirmation failed:', emailError);
+        
+        // Check if it's a configuration issue
+        const configTest = testEmailJSConfig();
+        if (!configTest.isConfigured) {
+          console.warn('EmailJS not configured:', configTest.issues);
+          toast.warning("Email confirmation is not configured. Please check the setup guide.");
+        } else {
+          toast.error("Failed to send confirmation email, but ticket was created successfully.");
+        }
+      }
       
       navigate("/");
       
@@ -478,56 +759,213 @@ export default function CreateTicketPage() {
                   )}
                 </button>
                 
-                {/* Analysis Results */}
+                {/* Comprehensive AI Analysis Results - Matching Chatbot Features */}
                 {analysisResults && (
-                  <div className="mt-4 bg-gray-50 rounded-lg p-4 border border-gray-200">
-                    <div className="mb-4">
-                      <h4 className="text-sm font-semibold text-gray-700">Sentiment Analysis</h4>
-                      <div className="flex items-center mt-1">
-                        <div className={`w-3 h-3 rounded-full mr-2 ${
-                          analysisResults.sentiment === 'POSITIVE' ? 'bg-green-500' : 
-                          analysisResults.sentiment === 'NEGATIVE' ? 'bg-red-500' : 'bg-yellow-500'
-                        }`}></div>
-                        <span className="text-sm text-gray-600">{analysisResults.sentiment}</span>
+                  <div className="mt-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200">
+                    <div className="flex items-center mb-4">
+                      <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg p-2 mr-3">
+                        <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                        </svg>
                       </div>
-                      
-                      {/* Score visualization */}
-                      <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
-                        <div 
-                          className={`h-2.5 rounded-full ${
-                            analysisResults.sentiment === 'POSITIVE' ? 'bg-green-500' : 
-                            analysisResults.sentiment === 'NEGATIVE' ? 'bg-red-500' : 'bg-yellow-500'
-                          }`}
-                          style={{width: `${analysisResults.score * 100}%`}}
-                        ></div>
-                      </div>
-                      <div className="mt-1 flex justify-between text-xs text-gray-500">
-                        <span>Low</span>
-                        <span>Medium</span>
-                        <span>High</span>
-                      </div>
-                    </div>
-                    
-                    <div className="mb-4">
-                      <h4 className="text-sm font-semibold text-gray-700">Suggested Priority</h4>
-                      <div className={`mt-1 px-3 py-2 rounded-md border ${getPriorityColor(analysisResults.priority)}`}>
+                      <div>
+                        <h4 className="text-lg font-bold text-gray-800">AI Generated Analysis</h4>
                         <div className="flex items-center">
-                          <span className={`w-3 h-3 rounded-full mr-2 ${
-                            analysisResults.priority === 'Low' ? 'bg-green-500' : 
-                            analysisResults.priority === 'Medium' ? 'bg-yellow-500' : 
-                            analysisResults.priority === 'High' ? 'bg-orange-500' : 
-                            'bg-red-500'
-                          }`}></span>
-                          <span>{analysisResults.priority}</span>
+                          <div className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full">
+                            AI POWERED
+                          </div>
+                          <span className="ml-2 text-xs text-gray-500">Same AI technology as our chatbot</span>
                         </div>
                       </div>
                     </div>
-                    
-                    {analysisResults.suggestedSolution && (
-                      <div>
-                        <h4 className="text-sm font-semibold text-gray-700">Suggested Solution</h4>
-                        <div className="mt-1 p-3 bg-white rounded border border-gray-200 text-sm">
-                          {analysisResults.suggestedSolution}
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                      {/* Sentiment Analysis */}
+                      <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4">
+                        <div className="flex items-center mb-2">
+                          <svg className="h-5 w-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                          </svg>
+                          <span className="font-semibold text-green-800">Sentiment Score</span>
+                        </div>
+                        <p className="text-green-700 font-medium">
+                          {analysisResults.sentiment || 
+                           (analysisResults.sentimentScore > 0.7 ? 'POSITIVE' : 
+                            analysisResults.sentimentScore < 0.4 ? 'NEGATIVE' : 'NEUTRAL')}
+                        </p>
+                        <div className="mt-2">
+                          <div className="w-full bg-green-200 rounded-full h-2">
+                            <div 
+                              className={`h-2 rounded-full transition-all duration-300 ${
+                                (analysisResults.sentimentScore || analysisResults.score) > 0.7 ? 'bg-green-600' : 
+                                (analysisResults.sentimentScore || analysisResults.score) < 0.4 ? 'bg-red-500' : 'bg-yellow-500'
+                              }`}
+                              style={{ width: `${(analysisResults.sentimentScore || analysisResults.score || 0.5) * 100}%` }}
+                            ></div>
+                          </div>
+                          <div className="flex justify-between text-xs text-green-600 mt-1">
+                            <span>Score: {((analysisResults.sentimentScore || analysisResults.score || 0.5) * 100).toFixed(1)}%</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* AI Category Prediction */}
+                      {analysisResults.predictedCategory && (
+                        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+                          <div className="flex items-center mb-2">
+                            <svg className="h-5 w-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                            </svg>
+                            <span className="font-semibold text-blue-800">AI Category</span>
+                          </div>
+                          <p className="text-blue-700 font-medium capitalize">{analysisResults.predictedCategory.category}</p>
+                          {analysisResults.predictedCategory.confidence && (
+                            <div className="mt-2">
+                              <div className="flex justify-between text-xs text-blue-600 mb-1">
+                                <span>Confidence</span>
+                                <span>{Math.round(analysisResults.predictedCategory.confidence * 100)}%</span>
+                              </div>
+                              <div className="w-full bg-blue-200 rounded-full h-2">
+                                <div 
+                                  className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                                  style={{ width: `${analysisResults.predictedCategory.confidence * 100}%` }}
+                                ></div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* AI Priority Suggestion */}
+                      {analysisResults.aiSuggestedPriority && (
+                        <div className="bg-gradient-to-br from-orange-50 to-red-50 border border-orange-200 rounded-lg p-4">
+                          <div className="flex items-center mb-2">
+                            <svg className="h-5 w-5 text-orange-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span className="font-semibold text-orange-800">AI Priority</span>
+                          </div>
+                          <span 
+                            className={`px-2 py-1 rounded-full text-xs font-bold ${
+                              analysisResults.aiSuggestedPriority === 'Critical' ? 'bg-red-100 text-red-800' :
+                              analysisResults.aiSuggestedPriority === 'High' ? 'bg-orange-100 text-orange-800' :
+                              analysisResults.aiSuggestedPriority === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-green-100 text-green-800'
+                            }`}
+                          >
+                            {analysisResults.aiSuggestedPriority}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Emotion Detection */}
+                      {analysisResults.detectedEmotion && (
+                        <div className="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-4">
+                          <div className="flex items-center mb-2">
+                            <svg className="h-5 w-5 text-purple-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            <span className="font-semibold text-purple-800">Detected Emotion</span>
+                          </div>
+                          <div className="flex items-center">
+                            <span className="text-2xl mr-2">
+                              {analysisResults.detectedEmotion === 'joy' ? '😊' : 
+                               analysisResults.detectedEmotion === 'anger' ? '😠' : 
+                               analysisResults.detectedEmotion === 'sadness' ? '😢' : 
+                               analysisResults.detectedEmotion === 'fear' ? '😰' : 
+                               analysisResults.detectedEmotion === 'surprise' ? '😲' : '😐'}
+                            </span>
+                            <span className="text-purple-700 font-medium capitalize">{analysisResults.detectedEmotion}</span>
+                          </div>
+                          {analysisResults.emotionIntensity && (
+                            <div className="mt-2">
+                              <div className="flex justify-between text-xs text-purple-600 mb-1">
+                                <span>Intensity</span>
+                                <span>{(analysisResults.emotionIntensity * 100).toFixed(0)}%</span>
+                              </div>
+                              <div className="w-full bg-purple-200 rounded-full h-2">
+                                <div 
+                                  className="bg-purple-600 h-2 rounded-full transition-all duration-300" 
+                                  style={{ width: `${analysisResults.emotionIntensity * 100}%` }}
+                                ></div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Estimated Resolution Time */}
+                      {analysisResults.estimatedResolutionTime && (
+                        <div className="bg-gradient-to-br from-cyan-50 to-blue-50 border border-cyan-200 rounded-lg p-4">
+                          <div className="flex items-center mb-2">
+                            <svg className="h-5 w-5 text-cyan-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span className="font-semibold text-cyan-800">Est. Resolution</span>
+                          </div>
+                          <p className="text-cyan-700 font-medium">{analysisResults.estimatedResolutionTime}</p>
+                        </div>
+                      )}
+
+                      {/* Support Action */}
+                      {analysisResults.supportAction && (
+                        <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-lg p-4">
+                          <div className="flex items-center mb-2">
+                            <svg className="h-5 w-5 text-amber-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span className="font-semibold text-amber-800">Recommended Action</span>
+                          </div>
+                          <p className="text-amber-700 text-sm">{analysisResults.supportAction}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* AI Generated Response */}
+                    {analysisResults.automatedResponse && (
+                      <div className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200 rounded-lg p-6 mb-4">
+                        <div className="flex items-center mb-3">
+                          <svg className="h-6 w-6 text-indigo-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-4l-4 4z" />
+                          </svg>
+                          <span className="font-semibold text-indigo-800 text-lg">AI Generated Response</span>
+                          <svg className="h-4 w-4 text-indigo-500 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3l14 9-14 9V3z" />
+                          </svg>
+                        </div>
+                        <div className="bg-white rounded-lg p-4 border border-indigo-100">
+                          <p className="text-gray-800 leading-relaxed">{analysisResults.automatedResponse}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* AI Insights */}
+                    {analysisResults.aiInsights && (
+                      <div className="bg-gradient-to-br from-violet-50 to-purple-50 border border-violet-200 rounded-lg p-4">
+                        <div className="flex items-center mb-3">
+                          <svg className="h-5 w-5 text-violet-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                          </svg>
+                          <span className="font-semibold text-violet-800">AI Insights & Analysis</span>
+                        </div>
+                        <div className="bg-white rounded-lg p-3 border border-violet-100">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Analysis Completed:</span>
+                              <span className="text-gray-800">✓</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Automation Attempted:</span>
+                              <span className="text-gray-800">✓</span>
+                            </div>
+                            {analysisResults.shouldEscalate && (
+                              <div className="flex justify-between col-span-full">
+                                <span className="text-gray-600">Escalation Recommended:</span>
+                                <span className="text-orange-600 font-medium">Yes</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     )}

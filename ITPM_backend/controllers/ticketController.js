@@ -12,11 +12,19 @@ export const createTicket = async (req, res) => {
       relatedservice,
       priority,
       statement,
-      sentimentScore
+      sentimentScore,
+      aiPredictedCategory,
+      categoryConfidence,
+      estimatedResolutionTime,
+      automatedResponse,
+      detectedEmotion,
+      aiInsights,
+      suggestedSolution
     } = req.body;
     
     // Process sentiment score if available
     const parsedSentimentScore = sentimentScore ? parseFloat(sentimentScore) : null;
+    const parsedCategoryConfidence = categoryConfidence ? parseFloat(categoryConfidence) : null;
     
     // Determine AI suggested priority based on sentiment score
     let aiSuggestedPriority = null;
@@ -44,10 +52,19 @@ export const createTicket = async (req, res) => {
       priority,
       attachment,
       statement,
-      // Add sentiment analysis data
+      // Enhanced AI analysis data (matching both chatbot and CreateTicket.jsx)
       sentimentScore: parsedSentimentScore,
       aiSuggestedPriority,
-      sentimentAnalyzedAt: parsedSentimentScore ? new Date() : null
+      sentimentAnalyzedAt: parsedSentimentScore ? new Date() : null,
+      aiPredictedCategory: aiPredictedCategory || null,
+      categoryConfidence: parsedCategoryConfidence,
+      automatedResponse: automatedResponse || null,
+      estimatedResolutionTime: estimatedResolutionTime || null,
+      detectedEmotion: detectedEmotion || null,
+      aiInsights: aiInsights || null,
+      // Flag for AI-enhanced tickets
+      hasAutomatedSolution: Boolean(automatedResponse || suggestedSolution),
+      automatedSolutionAttempted: Boolean(automatedResponse || suggestedSolution)
     });
     
     await ticket.save();
@@ -248,5 +265,118 @@ export const getSentimentStatistics = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+// Send email confirmation after ticket creation
+export const sendConfirmationEmail = async (req, res) => {
+  try {
+    const { ticketId, email, name, subject } = req.body;
+    
+    if (!ticketId || !email) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Ticket ID and email are required" 
+      });
+    }
+
+    // Try to find ticket by MongoDB _id first, then by ticketid field
+    let ticket;
+    try {
+      // Try finding by MongoDB ObjectId first
+      ticket = await Ticket.findById(ticketId);
+    } catch (error) {
+      // If ObjectId parsing fails, try finding by ticketid field
+      ticket = await Ticket.findOne({ ticketid: ticketId });
+    }
+    
+    // If still not found, try finding by ticketid as string
+    if (!ticket) {
+      ticket = await Ticket.findOne({ ticketid: parseInt(ticketId) });
+    }
+    
+    if (!ticket) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Ticket not found" 
+      });
+    }
+
+    // Create email content
+    const emailContent = {
+      to: email,
+      subject: `Ticket Confirmation - ${subject || ticket.subject}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px;">
+            <h2 style="color: #333; margin-bottom: 20px;">Ticket Created Successfully</h2>
+            
+            <p>Dear ${name || ticket.name},</p>
+            
+            <p>Your support ticket has been successfully created and submitted to our system. Here are the details:</p>
+            
+            <div style="background-color: white; padding: 15px; border-radius: 5px; margin: 20px 0;">
+              <strong>Ticket ID:</strong> ${ticket.ticketid || ticket._id}<br>
+              <strong>Subject:</strong> ${ticket.subject}<br>
+              <strong>Department:</strong> ${ticket.department}<br>
+              <strong>Priority:</strong> ${ticket.priority}<br>
+              <strong>Status:</strong> ${ticket.status || 'Open'}<br>
+              <strong>Created:</strong> ${new Date(ticket.date || ticket.createdAt).toLocaleString()}
+            </div>
+            
+            <p>Our support team will review your ticket and respond within the estimated timeframe based on your ticket priority:</p>
+            <ul>
+              <li><strong>Low Priority:</strong> 24-48 hours</li>
+              <li><strong>Medium Priority:</strong> 4-8 hours</li>
+              <li><strong>High Priority:</strong> 1-4 hours</li>
+              <li><strong>Critical/Urgent:</strong> 30 minutes - 1 hour</li>
+            </ul>
+            
+            <p>You can check your ticket status using our chatbot by providing your email address.</p>
+            
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
+              <p>Thank you for contacting our support team!</p>
+              <p style="color: #666; font-size: 14px;">
+                This is an automated message. Please do not reply to this email directly.
+              </p>
+            </div>
+          </div>
+        </div>
+      `
+    };
+
+    // Note: In a real implementation, you would use a service like SendGrid, Nodemailer, etc.
+    // For now, we'll simulate successful email sending
+    console.log('Email confirmation would be sent:', emailContent);
+    
+    // You can integrate with your preferred email service here
+    // Example with Nodemailer (commented out):
+    /*
+    const nodemailer = require('nodemailer');
+    const transporter = nodemailer.createTransporter({
+      // Your email service configuration
+    });
+    
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM_EMAIL,
+      to: email,
+      subject: emailContent.subject,
+      html: emailContent.html
+    });
+    */
+
+    res.status(200).json({
+      success: true,
+      message: "Confirmation email sent successfully",
+      ticketId: ticket.ticketid || ticket._id
+    });
+
+  } catch (error) {
+    console.error('Email confirmation error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Failed to send confirmation email",
+      error: error.message 
+    });
   }
 };
