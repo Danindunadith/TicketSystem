@@ -36,14 +36,8 @@ const ticketSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-    // New field for AI sentiment score
-    sentimentScore: {
-        type: Number,
-    },
-    // New field for AI suggested priority
-    aiSuggestedPriority: {
-        type: String,
-    },
+    // New field for AI sentiment score (moved to comprehensive section above)
+    // aiSuggestedPriority moved to comprehensive section above
     attachment: {
         type: String,
     },
@@ -56,7 +50,18 @@ const ticketSchema = new mongoose.Schema({
         type: Date,
         default: null
     },
-    // Enhanced AI fields for predictive categorization
+    // Enhanced AI fields for comprehensive analysis (matching CreateTicket.jsx)
+    // Basic sentiment analysis
+    sentiment: {
+        type: String,
+        default: null
+    },
+    sentimentScore: {
+        type: Number,
+        default: null
+    },
+    
+    // Category prediction
     aiPredictedCategory: {
         type: String,
         default: null
@@ -65,14 +70,18 @@ const ticketSchema = new mongoose.Schema({
         type: Number,
         default: null
     },
-    automatedResponse: {
+    
+    // Priority and urgency
+    aiSuggestedPriority: {
         type: String,
         default: null
     },
-    estimatedResolutionTime: {
+    urgency: {
         type: String,
         default: null
     },
+    
+    // Emotion analysis
     detectedEmotion: {
         type: String,
         default: null
@@ -81,10 +90,36 @@ const ticketSchema = new mongoose.Schema({
         type: Number,
         default: null
     },
+    emotions: {
+        type: Array,
+        default: null
+    },
+    
+    // AI-generated content
+    automatedResponse: {
+        type: String,
+        default: null
+    },
+    estimatedResolutionTime: {
+        type: String,
+        default: null
+    },
     supportAction: {
         type: String,
         default: null
     },
+    
+    // Additional insights
+    chatbotSuggestions: {
+        type: Array,
+        default: null
+    },
+    shouldEscalate: {
+        type: Boolean,
+        default: false
+    },
+    
+    // Complete AI insights object
     aiInsights: {
         type: Object,
         default: null

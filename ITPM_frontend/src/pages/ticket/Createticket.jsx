@@ -109,62 +109,48 @@ export default function CreateTicketPage() {
     try {
       const fullMessage = `${formData.subject}. ${formData.statement}`;
       
-      // Run comprehensive AI analysis (same as chatbot)
-      const [ticketAnalysis, emotionAnalysis] = await Promise.all([
-        axios.post(`http://localhost:3002/api/ai/analyze-ticket`, {
-          message: fullMessage,
-          category: null // Let AI predict the category
-        }),
-        axios.post(`http://localhost:3002/api/ai/analyze-emotion`, {
-          text: fullMessage
-        })
-      ]);
+      // Run comprehensive AI analysis using the new endpoint
+      const analysisResponse = await axios.post(`http://localhost:3002/api/ai/analyze-ticket`, {
+        title: formData.subject,
+        description: formData.statement,
+        priority: formData.priority
+      });
       
-      if (ticketAnalysis.data.success) {
-        const aiResults = ticketAnalysis.data;
-        const emotionResults = emotionAnalysis.data;
+      if (analysisResponse.data.success) {
+        const aiResults = analysisResponse.data;
         
-        // Comprehensive results matching chatbot functionality
+        // Set the comprehensive results directly from the new endpoint
         const comprehensiveResults = {
           // Basic sentiment analysis
-          sentiment: aiResults.analysis.sentiment.label,
-          sentimentScore: aiResults.analysis.sentiment.score,
+          sentiment: aiResults.sentiment,
+          sentimentScore: aiResults.sentimentScore,
           
           // Category prediction
           predictedCategory: {
-            category: aiResults.analysis.category,
-            confidence: aiResults.analysis.categoryConfidence
+            category: aiResults.predictedCategory,
+            confidence: aiResults.categoryConfidence
           },
           
           // Priority and urgency
-          aiSuggestedPriority: mapUrgencyToPriority(aiResults.analysis.urgency),
-          urgency: aiResults.analysis.urgency,
+          aiSuggestedPriority: aiResults.aiSuggestedPriority,
+          urgency: aiResults.urgency,
           
           // Emotion analysis
-          detectedEmotion: emotionResults.primaryEmotion,
-          emotionIntensity: emotionResults.intensity,
-          emotions: emotionResults.emotions,
+          detectedEmotion: aiResults.detectedEmotion,
+          emotionIntensity: aiResults.emotionIntensity,
+          emotions: aiResults.emotions,
           
           // AI-generated content
-          automatedResponse: aiResults.response,
-          estimatedResolutionTime: aiResults.analysis.estimatedResolution,
-          supportAction: emotionResults.supportAction?.action,
+          automatedResponse: aiResults.automatedResponse,
+          estimatedResolutionTime: aiResults.estimatedResolutionTime,
+          supportAction: aiResults.supportAction,
           
           // Additional insights
-          chatbotSuggestions: aiResults.suggestions,
-          shouldEscalate: emotionResults.supportAction?.escalate || false,
+          chatbotSuggestions: aiResults.chatbotSuggestions,
+          shouldEscalate: aiResults.shouldEscalate,
           
-          // AI insights object
-          aiInsights: {
-            categoryConfidence: aiResults.analysis.categoryConfidence,
-            sentimentScore: aiResults.analysis.sentiment.score,
-            emotionBreakdown: emotionResults.emotions,
-            urgencyReasoning: `Based on sentiment (${aiResults.analysis.sentiment.label}) and category (${aiResults.analysis.category})`,
-            escalationRecommended: emotionResults.supportAction?.escalate || false,
-            estimatedResolution: aiResults.analysis.estimatedResolution,
-            automationAttempted: true,
-            analysisTimestamp: new Date().toISOString()
-          }
+          // AI insights
+          aiInsights: aiResults.aiInsights
         };
         
         setAnalysisResults(comprehensiveResults);
@@ -324,6 +310,56 @@ export default function CreateTicketPage() {
     console.log("Sending POST request to:", apiUrl);
 
     try {
+      // ALWAYS run AI analysis before ticket submission to ensure fresh data
+      let currentAnalysisResults = null;
+      if (formData.subject && formData.statement) {
+        console.log("Running AI analysis before ticket submission...");
+        try {
+          const analysisResponse = await axios.post(`http://localhost:3002/api/ai/analyze-ticket`, {
+            title: formData.subject,
+            description: formData.statement,
+            priority: formData.priority
+          });
+          
+          if (analysisResponse.data && analysisResponse.data.success) {
+            currentAnalysisResults = {
+              sentiment: analysisResponse.data.sentiment,
+              sentimentScore: analysisResponse.data.sentimentScore,
+              predictedCategory: {
+                category: analysisResponse.data.predictedCategory,
+                confidence: analysisResponse.data.categoryConfidence
+              },
+              aiSuggestedPriority: analysisResponse.data.aiSuggestedPriority,
+              urgency: analysisResponse.data.urgency,
+              detectedEmotion: analysisResponse.data.detectedEmotion,
+              emotionIntensity: analysisResponse.data.emotionIntensity,
+              emotions: analysisResponse.data.emotions,
+              automatedResponse: analysisResponse.data.automatedResponse,
+              estimatedResolutionTime: analysisResponse.data.estimatedResolutionTime,
+              supportAction: analysisResponse.data.supportAction,
+              chatbotSuggestions: analysisResponse.data.chatbotSuggestions,
+              shouldEscalate: analysisResponse.data.shouldEscalate,
+              aiInsights: analysisResponse.data.aiInsights
+            };
+            setAnalysisResults(currentAnalysisResults);
+            console.log("✅ AI analysis completed successfully");
+            console.log("AI analysis results:", {
+              sentiment: currentAnalysisResults.sentiment,
+              category: currentAnalysisResults.predictedCategory?.category,
+              shouldEscalate: currentAnalysisResults.shouldEscalate,
+              hasAutomatedResponse: !!currentAnalysisResults.automatedResponse
+            });
+          } else {
+            console.warn("AI analysis response missing success field");
+          }
+        } catch (analysisError) {
+          console.error("AI analysis failed:", analysisError.response?.data || analysisError.message);
+          console.warn("Proceeding without AI analysis");
+        }
+      } else {
+        console.warn("Missing subject or statement - skipping AI analysis");
+      }
+
       const formDataToSend = new FormData();
       formDataToSend.append("name", formData.name);
       formDataToSend.append("email", formData.email);
@@ -338,37 +374,46 @@ export default function CreateTicketPage() {
       formDataToSend.append("statement", formData.statement);
       
       // Include comprehensive AI analysis data if available (same as chatbot)
-      if (analysisResults) {
+      if (currentAnalysisResults) {
         // Basic sentiment and category
-        formDataToSend.append("sentimentScore", analysisResults.sentimentScore || analysisResults.score);
-        formDataToSend.append("aiPredictedCategory", analysisResults.predictedCategory?.category || "");
-        formDataToSend.append("categoryConfidence", analysisResults.predictedCategory?.confidence || "");
+        formDataToSend.append("sentiment", currentAnalysisResults.sentiment);
+        formDataToSend.append("sentimentScore", currentAnalysisResults.sentimentScore);
+        formDataToSend.append("aiPredictedCategory", currentAnalysisResults.predictedCategory?.category || "");
+        formDataToSend.append("categoryConfidence", currentAnalysisResults.predictedCategory?.confidence || "");
         
         // AI-suggested priority and urgency
-        formDataToSend.append("aiSuggestedPriority", analysisResults.aiSuggestedPriority || analysisResults.priority);
+        formDataToSend.append("aiSuggestedPriority", currentAnalysisResults.aiSuggestedPriority);
+        formDataToSend.append("urgency", currentAnalysisResults.urgency);
         
         // Emotion detection
-        if (analysisResults.detectedEmotion) {
-          formDataToSend.append("detectedEmotion", analysisResults.detectedEmotion);
+        if (currentAnalysisResults.detectedEmotion) {
+          formDataToSend.append("detectedEmotion", currentAnalysisResults.detectedEmotion);
         }
-        if (analysisResults.emotionIntensity) {
-          formDataToSend.append("emotionIntensity", analysisResults.emotionIntensity);
+        if (currentAnalysisResults.emotionIntensity) {
+          formDataToSend.append("emotionIntensity", currentAnalysisResults.emotionIntensity);
+        }
+        if (currentAnalysisResults.emotions) {
+          formDataToSend.append("emotions", JSON.stringify(currentAnalysisResults.emotions));
         }
         
         // AI-generated content
-        if (analysisResults.automatedResponse) {
-          formDataToSend.append("automatedResponse", analysisResults.automatedResponse);
+        if (currentAnalysisResults.automatedResponse) {
+          formDataToSend.append("automatedResponse", currentAnalysisResults.automatedResponse);
         }
-        if (analysisResults.estimatedResolutionTime) {
-          formDataToSend.append("estimatedResolutionTime", analysisResults.estimatedResolutionTime);
+        if (currentAnalysisResults.estimatedResolutionTime) {
+          formDataToSend.append("estimatedResolutionTime", currentAnalysisResults.estimatedResolutionTime);
         }
-        if (analysisResults.supportAction) {
-          formDataToSend.append("supportAction", analysisResults.supportAction);
+        if (currentAnalysisResults.supportAction) {
+          formDataToSend.append("supportAction", currentAnalysisResults.supportAction);
         }
         
         // AI insights and metadata
-        if (analysisResults.aiInsights) {
-          formDataToSend.append("aiInsights", JSON.stringify(analysisResults.aiInsights));
+        if (currentAnalysisResults.chatbotSuggestions) {
+          formDataToSend.append("chatbotSuggestions", JSON.stringify(currentAnalysisResults.chatbotSuggestions));
+        }
+        formDataToSend.append("shouldEscalate", currentAnalysisResults.shouldEscalate);
+        if (currentAnalysisResults.aiInsights) {
+          formDataToSend.append("aiInsights", JSON.stringify(currentAnalysisResults.aiInsights));
         }
         
         // Automation flags
@@ -380,13 +425,15 @@ export default function CreateTicketPage() {
         
         // Log comprehensive AI data being sent
         console.log("Comprehensive AI analysis data being sent:", {
-          sentimentScore: analysisResults.sentimentScore || analysisResults.score,
-          aiPredictedCategory: analysisResults.predictedCategory?.category,
-          categoryConfidence: analysisResults.predictedCategory?.confidence,
-          aiSuggestedPriority: analysisResults.aiSuggestedPriority,
-          detectedEmotion: analysisResults.detectedEmotion,
-          emotionIntensity: analysisResults.emotionIntensity,
-          estimatedResolutionTime: analysisResults.estimatedResolutionTime,
+          sentiment: currentAnalysisResults.sentiment,
+          sentimentScore: currentAnalysisResults.sentimentScore,
+          aiPredictedCategory: currentAnalysisResults.predictedCategory?.category,
+          categoryConfidence: currentAnalysisResults.predictedCategory?.confidence,
+          aiSuggestedPriority: currentAnalysisResults.aiSuggestedPriority,
+          detectedEmotion: currentAnalysisResults.detectedEmotion,
+          emotionIntensity: currentAnalysisResults.emotionIntensity,
+          estimatedResolutionTime: currentAnalysisResults.estimatedResolutionTime,
+          shouldEscalate: currentAnalysisResults.shouldEscalate,
           hasAutomatedSolution: true,
           automatedSolutionAttempted: true
         });

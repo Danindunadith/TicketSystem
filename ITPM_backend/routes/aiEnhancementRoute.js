@@ -4,6 +4,7 @@ import {
   analyzeTicketEmotion, 
   getTicketInsights,
   analyzeTicketForChatbot,
+  comprehensiveTicketAnalysis,
   provideInstantHelp,
   getCategorizationAnalytics
 } from '../controllers/aiEnhancementController.js';
@@ -20,7 +21,10 @@ router.post('/analyze-emotion', analyzeTicketEmotion);
 router.get('/ticket-insights/:ticketId', getTicketInsights);
 
 // AI ticket analysis for chatbot
-router.post('/analyze-ticket', analyzeTicketForChatbot);
+router.post('/analyze-ticket', comprehensiveTicketAnalysis);
+
+// Chatbot-specific analysis (legacy)
+router.post('/analyze-ticket-chatbot', analyzeTicketForChatbot);
 
 // Instant help system for chatbot
 router.post('/instant-help', provideInstantHelp);

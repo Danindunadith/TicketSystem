@@ -37,12 +37,26 @@ export default function EnhancedChatBotFixed() {
     priority: '',
     attachment: null,
     statement: '',
+    // Basic sentiment and category
+    sentiment: '',
+    sentimentScore: '',
     aiPredictedCategory: '',
     categoryConfidence: '',
-    estimatedResolutionTime: '',
-    automatedResponse: '',
-    sentimentScore: '',
+    // Priority and urgency
+    urgency: '',
+    aiSuggestedPriority: '',
+    // Emotion analysis
     detectedEmotion: '',
+    emotionIntensity: '',
+    emotions: null,
+    // AI-generated content
+    automatedResponse: '',
+    estimatedResolutionTime: '',
+    supportAction: '',
+    // Additional insights
+    chatbotSuggestions: null,
+    shouldEscalate: false,
+    // Complete AI insights object
     aiInsights: null
   });
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -630,76 +644,237 @@ export default function EnhancedChatBotFixed() {
     const updatedMessages = [...messages, { type: 'user', content: description }];
     updatedMessages.push({ 
       type: 'bot', 
-      content: '🤖 AI is analyzing your ticket for smart categorization and priority detection...',
+      content: '🤖 AI is running comprehensive analysis: sentiment, emotion, category prediction, and priority detection...',
       isLoading: true 
     });
     setMessages(updatedMessages);
 
     try {
-      // Real AI Analysis - Call backend AI service
-      const aiAnalysisData = {
-        subject: ticketData.subject,
-        description: description,
-        customerEmail: ticketData.email
-      };
-
-      let aiResponse;
-      try {
-        // Try to get real AI analysis from backend
-        const response = await axios.post('http://localhost:3002/api/ai/analyze-ticket', aiAnalysisData);
-        aiResponse = response.data;
-      } catch (aiError) {
-        console.warn('AI service unavailable, using local intelligence...', aiError);
-        // Fallback to local AI logic
-        aiResponse = performLocalAIAnalysis(ticketData.subject, description);
+      const fullMessage = `${ticketData.subject}. ${description}`;
+      
+      // Run comprehensive AI analysis (same as CreateTicket.jsx)
+      const [ticketAnalysis, emotionAnalysis] = await Promise.all([
+        axios.post(`http://localhost:3002/api/ai/analyze-ticket`, {
+          message: fullMessage,
+          category: null // Let AI predict the category
+        }),
+        axios.post(`http://localhost:3002/api/ai/analyze-emotion`, {
+          text: fullMessage
+        })
+      ]);
+      
+      if (ticketAnalysis.data.success) {
+        const aiResults = ticketAnalysis.data;
+        const emotionResults = emotionAnalysis.data;
+        
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate processing time
+        updatedMessages.pop();
+        
+        // Helper function to map urgency levels to priority
+        const mapUrgencyToPriority = (urgency) => {
+          switch (urgency) {
+            case 'High': return 'Critical';
+            case 'Medium': return 'High';
+            case 'Low': return 'Medium';
+            default: return 'Medium';
+          }
+        };
+        
+        // Comprehensive results matching CreateTicket.jsx functionality
+        const comprehensiveResults = {
+          // Basic sentiment analysis
+          sentiment: aiResults.analysis.sentiment.label,
+          sentimentScore: aiResults.analysis.sentiment.score,
+          
+          // Category prediction
+          predictedCategory: {
+            category: aiResults.analysis.category,
+            confidence: aiResults.analysis.categoryConfidence
+          },
+          
+          // Priority and urgency
+          aiSuggestedPriority: mapUrgencyToPriority(aiResults.analysis.urgency),
+          urgency: aiResults.analysis.urgency,
+          
+          // Emotion analysis
+          detectedEmotion: emotionResults.primaryEmotion,
+          emotionIntensity: emotionResults.intensity,
+          emotions: emotionResults.emotions,
+          
+          // AI-generated content
+          automatedResponse: aiResults.response,
+          estimatedResolutionTime: aiResults.analysis.estimatedResolution,
+          supportAction: emotionResults.supportAction?.action,
+          
+          // Additional insights
+          chatbotSuggestions: aiResults.suggestions,
+          shouldEscalate: emotionResults.supportAction?.escalate || false,
+          
+          // AI insights object
+          aiInsights: {
+            categoryConfidence: aiResults.analysis.categoryConfidence,
+            sentimentScore: aiResults.analysis.sentiment.score,
+            emotionBreakdown: emotionResults.emotions,
+            urgencyReasoning: `Based on sentiment (${aiResults.analysis.sentiment.label}) and category (${aiResults.analysis.category})`,
+            escalationRecommended: emotionResults.supportAction?.escalate || false,
+            estimatedResolution: aiResults.analysis.estimatedResolution,
+            automationAttempted: true,
+            analysisTimestamp: new Date().toISOString()
+          }
+        };
+        
+        const aiResultsMessage = {
+          type: 'bot',
+          content: `✅ **Comprehensive AI Analysis Complete!**\n\n📊 **Predicted Category:** ${comprehensiveResults.predictedCategory.category}\n🎯 **Confidence:** ${(comprehensiveResults.predictedCategory.confidence * 100).toFixed(1)}%\n😊 **Detected Emotion:** ${comprehensiveResults.detectedEmotion} (${(comprehensiveResults.emotionIntensity * 100).toFixed(0)}% intensity)\n💭 **Sentiment:** ${comprehensiveResults.sentiment} (Score: ${comprehensiveResults.sentimentScore.toFixed(2)})\n⚡ **AI Priority:** ${comprehensiveResults.aiSuggestedPriority}\n🕒 **Estimated Resolution:** ${comprehensiveResults.estimatedResolutionTime}\n${comprehensiveResults.shouldEscalate ? '🚨 **Escalation Recommended**' : ''}\n\n🎫 **Creating your ticket with full AI analysis...**`,
+          timestamp: new Date().toLocaleTimeString()
+        };
+        
+        updatedMessages.push(aiResultsMessage);
+        setMessages(updatedMessages);
+        
+        // Store comprehensive AI results in ticket data and ensure required fields are populated
+        setTicketData(prev => ({
+          ...prev,
+          department: prev.department || detectDepartment(prev.subject, description),
+          relatedservice: prev.relatedservice || detectRelatedService(prev.subject, description, prev.department || detectDepartment(prev.subject, description)),
+          // Basic sentiment and category
+          sentiment: comprehensiveResults.sentiment,
+          sentimentScore: comprehensiveResults.sentimentScore,
+          aiPredictedCategory: comprehensiveResults.predictedCategory.category,
+          categoryConfidence: comprehensiveResults.predictedCategory.confidence,
+          // Priority and urgency
+          aiSuggestedPriority: comprehensiveResults.aiSuggestedPriority,
+          urgency: comprehensiveResults.urgency,
+          priority: comprehensiveResults.aiSuggestedPriority,
+          // Emotion analysis
+          detectedEmotion: comprehensiveResults.detectedEmotion,
+          emotionIntensity: comprehensiveResults.emotionIntensity,
+          emotions: comprehensiveResults.emotions,
+          // AI-generated content
+          automatedResponse: comprehensiveResults.automatedResponse,
+          estimatedResolutionTime: comprehensiveResults.estimatedResolutionTime,
+          supportAction: comprehensiveResults.supportAction,
+          // Additional insights
+          chatbotSuggestions: comprehensiveResults.chatbotSuggestions,
+          shouldEscalate: comprehensiveResults.shouldEscalate,
+          // Complete AI insights object
+          aiInsights: comprehensiveResults.aiInsights
+        }));
+        
+        setTimeout(() => {
+          setIsAnalyzing(false); // Reset analyzing state before ticket submission
+          submitTicketWithAI(description);
+        }, 2000);
+        
+      } else {
+        throw new Error('AI analysis failed');
       }
-
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate processing time
-      updatedMessages.pop();
-      
-      const aiResults = {
-        type: 'bot',
-        content: `✅ **AI Analysis Complete!**\n\n📊 **Predicted Category:** ${aiResponse.category}\n🎯 **Confidence:** ${aiResponse.confidence}%\n⚡ **Priority:** ${aiResponse.priority}\n🕒 **Estimated Resolution:** ${aiResponse.estimatedTime}\n\n🧠 **AI Insights:**\n• ${aiResponse.insights.join('\n• ')}\n\n🎫 **Creating your ticket with AI enhancements...**`,
-        timestamp: new Date().toLocaleTimeString()
-      };
-      
-      updatedMessages.push(aiResults);
-      setMessages(updatedMessages);
-      
-      // Store AI results in ticket data
-      setTicketData(prev => ({
-        ...prev,
-        aiPredictedCategory: aiResponse.category,
-        categoryConfidence: aiResponse.confidence / 100,
-        sentimentScore: aiResponse.sentimentScore || 0.7,
-        detectedEmotion: aiResponse.detectedEmotion || 'neutral',
-        estimatedResolutionTime: aiResponse.estimatedTime,
-        automatedResponse: `AI Analysis: ${aiResponse.category} (${aiResponse.confidence}% confidence). ${aiResponse.insights.join(' ')}`,
-        priority: aiResponse.priority,
-        aiInsights: {
-          category: aiResponse.category,
-          confidence: aiResponse.confidence,
-          insights: aiResponse.insights,
-          analysisTimestamp: new Date().toISOString(),
-          hasAutomation: true
-        }
-      }));
-      
-      setTimeout(() => {
-        submitTicketWithAI(description);
-      }, 2000);
       
     } catch (error) {
-      console.error('Error in AI processing:', error);
-      setIsAnalyzing(false);
-      updatedMessages.pop();
-      updatedMessages.push({
-        type: 'bot',
-        content: '❌ AI analysis encountered an issue, but I can still create your ticket manually. Creating ticket...',
-        timestamp: new Date().toLocaleTimeString()
-      });
-      setMessages(updatedMessages);
-      submitTicketWithAI(description);
+      console.error('Error in comprehensive AI processing:', error);
+      
+      // Fallback to original analysis endpoints (same as CreateTicket.jsx)
+      try {
+        const [sentimentResponse, categoryResponse] = await Promise.all([
+          axios.post(`http://localhost:3002/api/analysis/sentiment`, {
+            subject: ticketData.subject,
+            department: ticketData.department,
+            relatedService: ticketData.relatedservice,
+            description: description
+          }),
+          axios.post(`http://localhost:3002/api/ai/predict-category`, {
+            subject: ticketData.subject,
+            description: description,
+            department: ticketData.department
+          })
+        ]);
+        
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        updatedMessages.pop();
+        
+        // Combine fallback results
+        const fallbackResults = {
+          sentiment: sentimentResponse.data.sentiment || 'NEUTRAL',
+          sentimentScore: sentimentResponse.data.score || 0.5,
+          predictedCategory: { 
+            category: categoryResponse.data.predictions[0]?.category || 'general inquiry', 
+            confidence: categoryResponse.data.predictions[0]?.confidence || 0.5 
+          },
+          aiSuggestedPriority: sentimentResponse.data.priority || 'Medium',
+          automatedResponse: categoryResponse.data.automatedResponse,
+          estimatedResolutionTime: categoryResponse.data.estimatedResolutionTime,
+          detectedEmotion: 'neutral',
+          emotionIntensity: 0.5,
+          emotions: [{ emotion: 'neutral', score: 0.5 }],
+          supportAction: 'Standard support response',
+          shouldEscalate: false,
+          chatbotSuggestions: ['Check FAQ', 'Contact support'],
+          aiInsights: {
+            fallbackMode: true,
+            analysisTimestamp: new Date().toISOString(),
+            categoryConfidence: categoryResponse.data.predictions[0]?.confidence || 0.5,
+            sentimentScore: sentimentResponse.data.score || 0.5,
+            automationAttempted: true
+          }
+        };
+        
+        const fallbackMessage = {
+          type: 'bot',
+          content: `✅ **Fallback AI Analysis Complete!**\n\n📊 **Category:** ${fallbackResults.predictedCategory.category}\n💭 **Sentiment:** ${fallbackResults.sentiment}\n⚡ **Priority:** ${fallbackResults.aiSuggestedPriority}\n\n🎫 **Creating your ticket...**`,
+          timestamp: new Date().toLocaleTimeString()
+        };
+        
+        updatedMessages.push(fallbackMessage);
+        setMessages(updatedMessages);
+        
+        // Store fallback results
+        setTicketData(prev => ({
+          ...prev,
+          department: prev.department || detectDepartment(prev.subject, description),
+          relatedservice: prev.relatedservice || detectRelatedService(prev.subject, description, prev.department || detectDepartment(prev.subject, description)),
+          sentiment: fallbackResults.sentiment,
+          sentimentScore: fallbackResults.sentimentScore,
+          aiPredictedCategory: fallbackResults.predictedCategory.category,
+          categoryConfidence: fallbackResults.predictedCategory.confidence,
+          aiSuggestedPriority: fallbackResults.aiSuggestedPriority,
+          priority: fallbackResults.aiSuggestedPriority,
+          detectedEmotion: fallbackResults.detectedEmotion,
+          emotionIntensity: fallbackResults.emotionIntensity,
+          emotions: fallbackResults.emotions,
+          automatedResponse: fallbackResults.automatedResponse,
+          estimatedResolutionTime: fallbackResults.estimatedResolutionTime,
+          supportAction: fallbackResults.supportAction,
+          chatbotSuggestions: fallbackResults.chatbotSuggestions,
+          shouldEscalate: fallbackResults.shouldEscalate,
+          aiInsights: fallbackResults.aiInsights
+        }));
+        
+        setTimeout(() => {
+          setIsAnalyzing(false); // Reset analyzing state before ticket submission
+          submitTicketWithAI(description);
+        }, 2000);
+        
+      } catch (fallbackError) {
+        console.error('Fallback analysis error:', fallbackError);
+        setIsAnalyzing(false);
+        updatedMessages.pop();
+        updatedMessages.push({
+          type: 'bot',
+          content: '❌ AI analysis encountered an issue, but I can still create your ticket manually. Creating ticket...',
+          timestamp: new Date().toLocaleTimeString()
+        });
+        setMessages(updatedMessages);
+        
+        // Set basic ticket data without AI analysis
+        setTicketData(prev => ({
+          ...prev,
+          department: prev.department || detectDepartment(prev.subject, description),
+          relatedservice: prev.relatedservice || detectRelatedService(prev.subject, description, prev.department || detectDepartment(prev.subject, description)),
+          priority: prev.priority || 'Medium'
+        }));
+        
+        submitTicketWithAI(description);
+      }
     }
   };
 
@@ -1030,51 +1205,117 @@ export default function EnhancedChatBotFixed() {
     setMessages(updatedMessages);
     
     try {
-      // Prepare form data for submission
+      // Ensure required fields are populated with smart detection
+      const detectedDepartment = ticketData.department || detectDepartment(ticketData.subject, description);
+      const detectedService = ticketData.relatedservice || detectRelatedService(ticketData.subject, description, detectedDepartment);
+      const finalPriority = ticketData.priority || 'Medium';
+
+      // Step 1: Run comprehensive AI analysis first (like CreateTicket.jsx)
+      console.log('🧠 Running comprehensive AI analysis...');
+      const aiAnalysisResponse = await axios.post('http://localhost:3002/api/ai/analyze-ticket', {
+        subject: ticketData.subject,
+        description: description,
+        priority: finalPriority,
+        department: detectedDepartment
+      });
+
+      const aiAnalysis = aiAnalysisResponse.data;
+      console.log('✅ AI analysis completed:', aiAnalysis);
+
+      // Update ticketData with AI analysis results
+      const updatedTicketData = {
+        ...ticketData,
+        // Basic sentiment and category
+        sentiment: aiAnalysis.sentiment || 'NEUTRAL',
+        sentimentScore: aiAnalysis.sentimentScore || 0.5,
+        aiPredictedCategory: aiAnalysis.predictedCategory || 'general',
+        categoryConfidence: aiAnalysis.categoryConfidence || 0.5,
+        // Priority and urgency
+        urgency: aiAnalysis.urgency || 'Low',
+        aiSuggestedPriority: aiAnalysis.aiSuggestedPriority || finalPriority,
+        // Emotion analysis
+        detectedEmotion: aiAnalysis.detectedEmotion || 'neutral',
+        emotionIntensity: aiAnalysis.emotionIntensity || 0.5,
+        emotions: aiAnalysis.emotions || {},
+        // AI-generated content
+        automatedResponse: aiAnalysis.automatedResponse || '',
+        estimatedResolutionTime: aiAnalysis.estimatedResolutionTime || '2-4 hours',
+        supportAction: aiAnalysis.supportAction || 'Standard Support',
+        // Additional insights
+        chatbotSuggestions: aiAnalysis.chatbotSuggestions || [],
+        shouldEscalate: aiAnalysis.shouldEscalate || false,
+        aiInsights: aiAnalysis.aiInsights || []
+      };
+
+      console.log('📊 Updated ticket data with AI analysis:', updatedTicketData);
+      
+      // Step 2: Prepare form data for submission with AI analysis
       const formDataToSend = new FormData();
       
-      // Add all ticket data
-      formDataToSend.append("name", ticketData.name);
-      formDataToSend.append("email", ticketData.email);
-      formDataToSend.append("date", ticketData.date);
-      formDataToSend.append("subject", ticketData.subject);
-      formDataToSend.append("department", ticketData.department);
-      formDataToSend.append("relatedservice", ticketData.relatedservice);
-      formDataToSend.append("priority", ticketData.priority);
+      // Add all ticket data with fallback values for required fields
+      formDataToSend.append("name", updatedTicketData.name);
+      formDataToSend.append("email", updatedTicketData.email);
+      formDataToSend.append("date", updatedTicketData.date);
+      formDataToSend.append("subject", updatedTicketData.subject);
+      formDataToSend.append("department", detectedDepartment);
+      formDataToSend.append("relatedservice", detectedService);
+      formDataToSend.append("priority", finalPriority);
       formDataToSend.append("statement", description);
       
       // Add attachment if exists
-      if (ticketData.attachment) {
-        formDataToSend.append("attachment", ticketData.attachment);
+      if (updatedTicketData.attachment) {
+        formDataToSend.append("attachment", updatedTicketData.attachment);
       }
       
-      // Add AI-generated data
-      if (ticketData.aiPredictedCategory) {
-        formDataToSend.append("aiPredictedCategory", ticketData.aiPredictedCategory);
-      }
-      if (ticketData.categoryConfidence) {
-        formDataToSend.append("categoryConfidence", ticketData.categoryConfidence);
-      }
-      if (ticketData.sentimentScore) {
-        formDataToSend.append("sentimentScore", ticketData.sentimentScore);
-      }
-      if (ticketData.detectedEmotion) {
-        formDataToSend.append("detectedEmotion", ticketData.detectedEmotion);
-      }
-      if (ticketData.estimatedResolutionTime) {
-        formDataToSend.append("estimatedResolutionTime", ticketData.estimatedResolutionTime);
-      }
-      if (ticketData.automatedResponse) {
-        formDataToSend.append("automatedResponse", ticketData.automatedResponse);
-      }
-      if (ticketData.aiInsights) {
-        formDataToSend.append("aiInsights", JSON.stringify(ticketData.aiInsights));
-      }
+      // Include comprehensive AI analysis data (ALWAYS include since we just generated it)
+      // Basic sentiment and category
+      formDataToSend.append("sentiment", updatedTicketData.sentiment);
+      formDataToSend.append("sentimentScore", updatedTicketData.sentimentScore);
+      formDataToSend.append("aiPredictedCategory", updatedTicketData.aiPredictedCategory);
+      formDataToSend.append("categoryConfidence", updatedTicketData.categoryConfidence);
       
-      // Mark as AI-assisted
+      // AI-suggested priority and urgency
+      formDataToSend.append("aiSuggestedPriority", updatedTicketData.aiSuggestedPriority);
+      formDataToSend.append("urgency", updatedTicketData.urgency);
+      
+      // Emotion detection
+      formDataToSend.append("detectedEmotion", updatedTicketData.detectedEmotion);
+      formDataToSend.append("emotionIntensity", updatedTicketData.emotionIntensity);
+      formDataToSend.append("emotions", JSON.stringify(updatedTicketData.emotions));
+      
+      // AI-generated content
+      formDataToSend.append("automatedResponse", updatedTicketData.automatedResponse);
+      formDataToSend.append("estimatedResolutionTime", updatedTicketData.estimatedResolutionTime);
+      formDataToSend.append("supportAction", updatedTicketData.supportAction);
+      
+      // Additional insights
+      formDataToSend.append("chatbotSuggestions", JSON.stringify(updatedTicketData.chatbotSuggestions));
+      formDataToSend.append("shouldEscalate", updatedTicketData.shouldEscalate);
+      formDataToSend.append("aiInsights", JSON.stringify(updatedTicketData.aiInsights));
+      
+      // Automation flags
       formDataToSend.append("hasAutomatedSolution", "true");
       formDataToSend.append("automatedSolutionAttempted", "true");
+      
+      // Add timestamp for AI analysis
       formDataToSend.append("sentimentAnalyzedAt", new Date().toISOString());
+      
+      // Log comprehensive AI data being sent
+      console.log("Comprehensive AI analysis data being sent:", {
+        sentiment: updatedTicketData.sentiment,
+        sentimentScore: updatedTicketData.sentimentScore,
+        aiPredictedCategory: updatedTicketData.aiPredictedCategory,
+        categoryConfidence: updatedTicketData.categoryConfidence,
+        aiSuggestedPriority: updatedTicketData.aiSuggestedPriority,
+        urgency: updatedTicketData.urgency,
+        detectedEmotion: updatedTicketData.detectedEmotion,
+        emotionIntensity: updatedTicketData.emotionIntensity,
+        estimatedResolutionTime: updatedTicketData.estimatedResolutionTime,
+        supportAction: updatedTicketData.supportAction,
+        shouldEscalate: updatedTicketData.shouldEscalate,
+        hasAutomatedSolution: true,
+        automatedSolutionAttempted: true
+      });
       
       // Submit ticket to backend
       const response = await axios.post('http://localhost:3002/api/tickets/', formDataToSend, {
@@ -1091,16 +1332,16 @@ export default function EnhancedChatBotFixed() {
       // Send confirmation email using centralized function
       try {
         const emailResult = await sendEmailConfirmation({
-          email: ticketData.email,
-          name: ticketData.name,
+          email: updatedTicketData.email,
+          name: updatedTicketData.name,
           ticketId: ticketId,
-          subject: ticketData.subject,
-          department: ticketData.department,
-          priority: ticketData.priority,
-          date: ticketData.date,
+          subject: updatedTicketData.subject,
+          department: detectedDepartment,
+          priority: finalPriority,
+          date: updatedTicketData.date,
           statement: description,
-          aiPredictedCategory: ticketData.aiPredictedCategory || 'AI Analysis',
-          automatedResponse: ticketData.automatedResponse || 'AI-powered assistance provided'
+          aiPredictedCategory: updatedTicketData.aiPredictedCategory || 'AI Analysis',
+          automatedResponse: updatedTicketData.automatedResponse || 'AI-powered assistance provided'
         });
         
         if (emailResult.success) {
@@ -1115,10 +1356,10 @@ export default function EnhancedChatBotFixed() {
       // Remove loading message
       updatedMessages.pop();
       
-      // Show success message with ticket details
+      // Show success message with comprehensive ticket details
       const successMessage = {
         type: 'bot',
-        content: `🎉 **Ticket Created Successfully!**\n\n🎫 **Ticket ID:** \`${ticketId}\`\n👤 **Name:** ${ticketData.name}\n📧 **Email:** ${ticketData.email}\n🏷️ **Department:** ${ticketData.department}\n⚡ **Priority:** ${ticketData.priority}\n\n✅ **Confirmation email sent!**\n\n🤖 **AI Analysis Included:**\n• Category: ${ticketData.aiPredictedCategory || 'General'}\n• Estimated Resolution: ${ticketData.estimatedResolutionTime || 'TBD'}\n• Automated Response: Generated\n\nOur support team will review your ticket and respond based on the priority level.`,
+        content: `🎉 **Ticket Created Successfully with Complete AI Analysis!**\n\n🎫 **Ticket ID:** \`${ticketId}\`\n👤 **Name:** ${updatedTicketData.name}\n📧 **Email:** ${updatedTicketData.email}\n🏷️ **Department:** ${detectedDepartment}\n🔧 **Service:** ${detectedService}\n⚡ **Priority:** ${finalPriority}\n\n✅ **Confirmation email sent!**\n\n🤖 **Comprehensive AI Analysis Included:**\n• **Category:** ${updatedTicketData.aiPredictedCategory || 'General'} ${updatedTicketData.categoryConfidence ? `(${(updatedTicketData.categoryConfidence * 100).toFixed(1)}% confidence)` : ''}\n• **Sentiment:** ${updatedTicketData.sentiment || 'Analyzed'} ${updatedTicketData.sentimentScore ? `(Score: ${updatedTicketData.sentimentScore.toFixed(2)})` : ''}\n• **Emotion:** ${updatedTicketData.detectedEmotion || 'Detected'} ${updatedTicketData.emotionIntensity ? `(${(updatedTicketData.emotionIntensity * 100).toFixed(0)}% intensity)` : ''}\n• **Estimated Resolution:** ${updatedTicketData.estimatedResolutionTime || 'TBD'}\n• **Support Action:** ${updatedTicketData.supportAction || 'Standard response'}\n${updatedTicketData.shouldEscalate ? '• **🚨 Escalation Recommended**' : ''}\n\n🤖 **AI Response:** ${updatedTicketData.automatedResponse || 'Processing your request...'}\n\nOur support team will review your ticket with all AI insights and respond based on the priority level.`,
         isSuccess: true,
         timestamp: new Date().toLocaleTimeString(),
         suggestions: [
@@ -1143,19 +1384,27 @@ export default function EnhancedChatBotFixed() {
         priority: '',
         attachment: null,
         statement: '',
+        sentiment: '',
+        sentimentScore: '',
         aiPredictedCategory: '',
         categoryConfidence: '',
+        urgency: '',
+        aiSuggestedPriority: '',
+        detectedEmotion: '',
+        emotionIntensity: '',
+        emotions: null,
         estimatedResolutionTime: '',
         automatedResponse: '',
-        sentimentScore: '',
-        detectedEmotion: '',
+        supportAction: '',
+        chatbotSuggestions: null,
+        shouldEscalate: false,
         aiInsights: null
       });
       setSelectedFile(null);
       
       // Show success toast
       import('react-hot-toast').then(toast => {
-        toast.default.success("🎉 AI-Powered Ticket Created Successfully!");
+        toast.default.success("🎉 AI-Powered Ticket Created Successfully with Complete Analysis!");
       });
       
     } catch (error) {
@@ -1184,6 +1433,7 @@ export default function EnhancedChatBotFixed() {
       });
     } finally {
       setIsSubmitting(false);
+      setIsAnalyzing(false);
     }
   };
 
@@ -1407,86 +1657,86 @@ export default function EnhancedChatBotFixed() {
       {/* Chat Window */}
       {isOpen && !isMinimized && (
         <div className="fixed bottom-20 right-4 w-[420px] h-[650px] bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 flex flex-col transition-all duration-500 transform">
-          {/* Professional Header */}
-          <div className="relative bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-900 text-white rounded-t-2xl overflow-hidden border-b border-white/10">
-            {/* Subtle Pattern Overlay */}
-            <div className="absolute inset-0 opacity-5">
-              <div className="absolute inset-0" style={{
-                backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-                backgroundSize: '30px 30px'
-              }}></div>
+          {/* Modern Enhanced Header */}
+          <div className="relative bg-gradient-to-r from-indigo-600 via-purple-600 to-blue-600 text-white rounded-t-2xl overflow-hidden shadow-xl">
+            {/* Animated Background Pattern */}
+            <div className="absolute inset-0 opacity-20">
+              <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent animate-pulse"></div>
             </div>
             
-            {/* Glass Effect Layer */}
-            <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent backdrop-blur-sm"></div>
+            {/* Glass Effect Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent backdrop-blur-sm"></div>
             
             {/* Main Header Content */}
-            <div className="relative px-6 py-4">
+            <div className="relative px-4 py-3.5">
               <div className="flex items-center justify-between">
-                {/* Left Section - Logo & Title */}
-                <div className="flex items-center space-x-4">
-                  <div className="relative">
-                    <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg border border-white/20">
-                      <Brain className="text-white" size={22} />
+                {/* Left Section - Brand & Status */}
+                <div className="flex items-center space-x-3">
+                  {/* AI Avatar with Status Indicator */}
+                  <div className="relative flex-shrink-0">
+                    <div className="w-11 h-11 bg-gradient-to-br from-white/20 to-white/5 backdrop-blur-sm rounded-xl border border-white/30 flex items-center justify-center shadow-lg ring-1 ring-white/10">
+                      <Brain className="text-white w-6 h-6 drop-shadow-sm" />
                     </div>
-                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-white animate-pulse"></div>
+                    <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-green-400 rounded-full border-2 border-white shadow-sm">
+                      <div className="w-full h-full bg-green-300 rounded-full animate-ping"></div>
+                    </div>
                   </div>
-                  <div className="flex flex-col">
-                    <div className="flex items-center space-x-2">
-                      <h3 className="font-semibold text-lg tracking-tight">AI Support Assistant</h3>
-                      <div className="px-2 py-0.5 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full text-xs font-medium">
-                        LIVE
+                  
+                  {/* Title & Info Section */}
+                  <div className="flex flex-col min-w-0 space-y-1">
+                    <div className="flex items-center space-x-2.5">
+                      <h3 className="text-white font-bold text-lg leading-none tracking-tight drop-shadow-sm">AI Assistant</h3>
+                      <div className="flex items-center px-2.5 py-1 bg-gradient-to-r from-green-500/90 to-emerald-500/90 backdrop-blur-sm rounded-full border border-green-400/40 shadow-sm">
+                        <div className="w-1.5 h-1.5 bg-white rounded-full mr-1.5 animate-pulse shadow-sm"></div>
+                        <span className="text-white text-xs font-semibold tracking-wider">LIVE</span>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2 mt-0.5">
-                      <div className="flex items-center space-x-1">
-                        <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></div>
-                        <span className="text-xs text-slate-300 font-medium">Online</span>
+                    <div className="flex items-center space-x-3 text-xs text-white/90">
+                      <div className="flex items-center space-x-1.5">
+                        <Shield className="w-3.5 h-3.5 text-green-300 drop-shadow-sm" />
+                        <span className="font-medium">Secure & Private</span>
                       </div>
-                      <span className="text-slate-400 text-xs">•</span>
-                      <span className="text-xs text-slate-300">Powered by GPT-4</span>
-                      <span className="text-slate-400 text-xs">•</span>
-                      <div className="flex items-center space-x-1">
-                        <Shield className="w-3 h-3 text-emerald-400" />
-                        <span className="text-xs text-slate-300">Secure</span>
-                      </div>
+                      <span className="text-white/50">•</span>
+                      <span className="font-medium">AI-Powered Support</span>
                     </div>
                   </div>
                 </div>
                 
-                {/* Right Section - Action Buttons */}
-                <div className="flex items-center space-x-1">
+                {/* Right Section - Action Controls */}
+                <div className="flex items-center space-x-1.5 flex-shrink-0">
+                  {/* New Chat Button */}
                   <div className="relative new-chat-container">
                     <button
                       onClick={handleNewChatClick}
-                      className="group relative overflow-hidden bg-white/10 hover:bg-white/20 text-white/90 hover:text-white transition-all duration-300 text-xs font-medium px-3 py-2 rounded-lg border border-white/10 hover:border-white/20 backdrop-blur-sm"
+                      className="group flex items-center space-x-2 px-3.5 py-2 bg-white/15 hover:bg-white/25 border border-white/20 hover:border-white/40 rounded-lg transition-all duration-300 backdrop-blur-sm shadow-sm hover:shadow-md"
+                      title="Start New Conversation"
                     >
-                      <div className="flex items-center space-x-1.5">
-                        <RefreshCw size={12} className="group-hover:rotate-180 transition-transform duration-500" />
-                        <span>Reset</span>
-                      </div>
+                      <RefreshCw size={13} className="text-white/85 group-hover:text-white group-hover:rotate-180 transition-all duration-300 drop-shadow-sm" />
+                      <span className="text-white/85 group-hover:text-white text-xs font-semibold">New</span>
                     </button>
                     
-                    {/* Confirmation Popup */}
+                    {/* Enhanced Confirmation Popup */}
                     {showNewChatConfirm && (
-                      <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-50 animate-in slide-in-from-top-2 duration-200">
-                        <div className="text-sm text-gray-800 mb-3">
-                          <div className="font-semibold mb-1 flex items-center">
-                            <RefreshCw size={14} className="mr-2 text-blue-600" />
-                            Start fresh conversation?
+                      <div className="absolute top-full right-0 mt-3 w-80 bg-white rounded-xl shadow-2xl border border-gray-200/80 p-5 z-50 animate-in slide-in-from-top-2 duration-300 backdrop-blur-xl">
+                        <div className="flex items-start space-x-4 mb-4">
+                          <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-md">
+                            <RefreshCw size={18} className="text-white" />
                           </div>
-                          <div className="text-gray-600">This will clear your current chat history and start over.</div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-base font-bold text-gray-900 mb-1">Start Fresh Conversation?</h4>
+                            <p className="text-sm text-gray-600 leading-relaxed">This will clear your current chat history and reset the AI assistant to start a new conversation.</p>
+                          </div>
                         </div>
-                        <div className="flex space-x-2">
+                        <div className="flex space-x-3">
                           <button
                             onClick={confirmNewChat}
-                            className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-xs font-medium py-2 px-3 rounded-lg transition-all duration-300 hover:shadow-lg"
+                            className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-sm font-semibold py-2.5 px-4 rounded-lg transition-all duration-300 hover:shadow-lg transform hover:scale-[1.02]"
                           >
-                            Yes, Reset
+                            Yes, Start Fresh
                           </button>
                           <button
                             onClick={cancelNewChat}
-                            className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium py-2 px-3 rounded-lg transition-all duration-300"
+                            className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold py-2.5 px-4 rounded-lg transition-all duration-300 hover:shadow-sm"
                           >
                             Cancel
                           </button>
@@ -1495,42 +1745,49 @@ export default function EnhancedChatBotFixed() {
                     )}
                   </div>
                   
-                  <div className="w-px h-6 bg-white/20 mx-1"></div>
+                  {/* Elegant Divider */}
+                  <div className="w-px h-6 bg-gradient-to-b from-transparent via-white/30 to-transparent mx-1"></div>
                   
+                  {/* Minimize Button */}
                   <button
                     onClick={minimizeChat}
-                    className="group relative p-2 text-white/80 hover:text-white hover:bg-white/15 transition-all duration-300 rounded-lg border border-transparent hover:border-white/20"
-                    title="Minimize"
+                    className="group p-2.5 text-white/80 hover:text-white hover:bg-white/20 transition-all duration-300 rounded-lg border border-transparent hover:border-white/30 backdrop-blur-sm"
+                    title="Minimize Chat"
                   >
-                    <Minimize2 size={14} className="group-hover:scale-110 transition-transform duration-200" />
+                    <Minimize2 size={14} className="group-hover:scale-110 transition-transform duration-200 drop-shadow-sm" />
                   </button>
                   
+                  {/* Close Button */}
                   <button 
                     onClick={toggleChat}
-                    className="group relative p-2 text-white/80 hover:text-white hover:bg-red-500/20 transition-all duration-300 rounded-lg border border-transparent hover:border-red-400/30"
-                    title="Close"
+                    className="group p-2.5 text-white/80 hover:text-white hover:bg-red-500/25 transition-all duration-300 rounded-lg border border-transparent hover:border-red-400/40 backdrop-blur-sm"
+                    title="Close Chat"
                   >
-                    <X size={16} className="group-hover:rotate-90 transition-transform duration-300" />
+                    <X size={14} className="group-hover:rotate-90 transition-transform duration-300 drop-shadow-sm" />
                   </button>
                 </div>
               </div>
               
-              {/* Status Bar */}
-              <div className="mt-3 pt-3 border-t border-white/10">
+              {/* Enhanced Status Bar */}
+              <div className="mt-3 pt-3 border-t border-white/20">
                 <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-1.5">
-                      <Clock className="w-3 h-3 text-blue-300" />
-                      <span className="text-slate-300">Avg. Response: &lt;30s</span>
+                  <div className="flex items-center space-x-5">
+                    <div className="flex items-center space-x-2 text-white/90">
+                      <div className="p-1 bg-blue-400/20 rounded-full">
+                        <Clock className="w-3 h-3 text-blue-200" />
+                      </div>
+                      <span className="font-medium">Response: &lt;30s</span>
                     </div>
-                    <div className="flex items-center space-x-1.5">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                      <span className="text-slate-300">99.9% Uptime</span>
+                    <div className="flex items-center space-x-2 text-white/90">
+                      <div className="p-1 bg-green-400/20 rounded-full">
+                        <CheckCircle2 className="w-3 h-3 text-green-300" />
+                      </div>
+                      <span className="font-medium">99.9% Uptime</span>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-1">
-                    <Star className="w-3 h-3 text-yellow-400 fill-current" />
-                    <span className="text-slate-300">4.9/5 Rating</span>
+                  <div className="flex items-center space-x-2 text-white/90">
+                    <Star className="w-3.5 h-3.5 text-yellow-300 fill-current drop-shadow-sm" />
+                    <span className="font-semibold">4.9/5 Rating</span>
                   </div>
                 </div>
               </div>

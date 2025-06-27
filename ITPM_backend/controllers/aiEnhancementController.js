@@ -298,6 +298,7 @@ export const analyzeTicketEmotion = async (req, res) => {
     
     res.json({
       emotions,
+      emotion: primaryEmotion.label,  // Add this field that the comprehensive analysis expects
       primaryEmotion: primaryEmotion.label,
       intensity: primaryEmotion.score,
       supportAction,
@@ -755,7 +756,7 @@ const getChatbotSuggestions = (category) => {
       "Test other devices",
       "Restart network adapter",
       "Try ethernet connection",
-      "Check with network team"
+      "Restart router/modem"
     ],
     'general inquiry': [
       "Provide more details",
@@ -919,12 +920,23 @@ export const getCategorizationAnalytics = async (req, res) => {
         percentage: Math.round((count / categorizedTickets.length) * 100)
       }));
     
+    // Calculate average confidence (ensure it's between 0-1, then convert to percentage)
+    let avgConfidence = 0;
+    if (categorizedTickets.length > 0) {
+      avgConfidence = totalConfidence / categorizedTickets.length;
+      // If confidence is stored as percentage (>1), convert to decimal first
+      if (avgConfidence > 1) {
+        avgConfidence = avgConfidence / 100;
+      }
+      // Convert to percentage for display
+      avgConfidence = Math.round(avgConfidence * 100);
+    }
+
     const analytics = {
       totalTickets: tickets.length,
       categorizedTickets: categorizedTickets.length,
       categorizationRate: Math.round((categorizedTickets.length / tickets.length) * 100),
-      averageConfidence: categorizedTickets.length > 0 ? 
-        Math.round((totalConfidence / categorizedTickets.length) * 100) : 0,
+      averageConfidence: avgConfidence,
       topCategories,
       timeRange
     };
@@ -945,3 +957,245 @@ export const getCategorizationAnalytics = async (req, res) => {
     });
   }
 };
+
+// Comprehensive ticket analysis for CreateTicket and Chatbot
+export const comprehensiveTicketAnalysis = async (req, res) => {
+  try {
+    const { title, description, priority, message } = req.body;
+    
+    // Use either title+description or message
+    const analysisText = message || `${title || ''} ${description || ''}`.trim();
+    
+    if (!analysisText) {
+      return res.status(400).json({ 
+        error: 'Title and description or message is required for analysis',
+        success: false 
+      });
+    }
+
+    console.log('Running comprehensive analysis for:', analysisText.substring(0, 100) + '...');
+
+    // Run all AI analyses in parallel
+    const [sentimentResponse, categoryResponse, emotionResponse] = await Promise.all([
+      // Sentiment analysis
+      axios.post(
+        'https://api-inference.huggingface.co/models/cardiffnlp/twitter-roberta-base-sentiment-latest',
+        { inputs: analysisText },
+        {
+          headers: {
+            'Authorization': `Bearer ${HUGGING_FACE_API_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      ).catch(err => {
+        console.warn('Sentiment analysis failed, using fallback');
+        return { data: [{ label: 'NEUTRAL', score: 0.5 }] };
+      }),
+
+      // Category prediction
+      axios.post(
+        'https://api-inference.huggingface.co/models/facebook/bart-large-mnli',
+        {
+          inputs: analysisText,
+          parameters: { 
+            candidate_labels: [
+              'password reset', 'software installation', 'hardware issue',
+              'network connectivity', 'email problems', 'system access',
+              'account lockout', 'performance issue', 'data recovery',
+              'security concern', 'training request', 'general inquiry',
+              'payroll issue', 'billing inquiry', 'technical support'
+            ]
+          }
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${HUGGING_FACE_API_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      ).catch(err => {
+        console.warn('Category prediction failed, using fallback');
+        return { data: { labels: ['general inquiry'], scores: [0.8] } };
+      }),
+
+      // Emotion analysis
+      axios.post(
+        'https://api-inference.huggingface.co/models/j-hartmann/emotion-english-distilroberta-base',
+        { inputs: analysisText },
+        {
+          headers: {
+            'Authorization': `Bearer ${HUGGING_FACE_API_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      ).catch(err => {
+        console.warn('Emotion analysis failed, using fallback');
+        return { data: [
+          { label: 'neutral', score: 0.7 },
+          { label: 'joy', score: 0.2 },
+          { label: 'sadness', score: 0.1 }
+        ]};
+      })
+    ]);
+
+    // Process results
+    const sentiment = sentimentResponse.data[0];
+    const predictedCategory = categoryResponse.data.labels[0];
+    const categoryConfidence = categoryResponse.data.scores[0];
+    
+    // Handle nested emotion response structure
+    console.log('Emotion response data:', emotionResponse.data);
+    const emotionData = Array.isArray(emotionResponse.data[0]) ? emotionResponse.data[0] : emotionResponse.data;
+    
+    const detectedEmotion = emotionData[0]?.label;
+    const emotionIntensity = emotionData[0]?.score;
+    
+    // Convert emotion response to object format
+    const emotions = {};
+    if (Array.isArray(emotionData) && emotionData.length > 0) {
+      emotionData.forEach(emotion => {
+        emotions[emotion.label] = emotion.score;
+      });
+    }
+
+    console.log('Processed emotion values:', { detectedEmotion, emotionIntensity, emotions });
+
+    // Calculate derived fields
+    const sentimentScore = sentiment.score;
+    const aiSuggestedPriority = calculateAISuggestedPriority(sentiment, detectedEmotion, emotionIntensity);
+    const urgency = calculateChatbotUrgencyLevel(sentiment, predictedCategory);
+    const shouldEscalate = shouldEscalateTicket(sentiment, detectedEmotion, emotionIntensity, predictedCategory);
+    const estimatedResolutionTime = getEstimatedResolutionTime(predictedCategory);
+    const supportAction = determineSupportAction(predictedCategory, sentiment);
+    const automatedResponse = generateSimpleAutomatedResponse(predictedCategory, sentiment);
+    const chatbotSuggestions = getChatbotSuggestions(predictedCategory);
+    const aiInsights = generateAIInsights(sentiment, detectedEmotion, predictedCategory, categoryConfidence);
+
+    // Create comprehensive analysis object
+    const comprehensiveAnalysis = {
+      sentiment: sentiment.label,
+      sentimentScore,
+      predictedCategory,
+      categoryConfidence,
+      aiSuggestedPriority,
+      urgency,
+      detectedEmotion,
+      emotionIntensity,
+      emotions,
+      automatedResponse,
+      estimatedResolutionTime,
+      supportAction,
+      chatbotSuggestions,
+      shouldEscalate,
+      aiInsights
+    };
+
+    console.log('Comprehensive analysis completed:', Object.keys(comprehensiveAnalysis));
+
+    res.json({
+      success: true,
+      ...comprehensiveAnalysis
+    });
+
+  } catch (error) {
+    console.error('Comprehensive analysis error:', error);
+    
+    // Fallback response with basic analysis
+    res.json({
+      success: true,
+      sentiment: 'NEUTRAL',
+      sentimentScore: 0.5,
+      predictedCategory: 'general inquiry',
+      categoryConfidence: 0.8,
+      aiSuggestedPriority: priority || 'Medium',
+      urgency: 'Medium',
+      detectedEmotion: 'neutral',
+      emotionIntensity: 0.5,
+      emotions: { neutral: 0.7, joy: 0.2, sadness: 0.1 },
+      automatedResponse: 'Thank you for contacting us. We will review your request and respond accordingly.',
+      estimatedResolutionTime: 24,
+      supportAction: 'Standard Review',
+      chatbotSuggestions: ['Check our FAQ', 'Contact support', 'Try troubleshooting guide'],
+      shouldEscalate: false,
+      aiInsights: 'Standard ticket requiring routine processing.',
+      fromFallback: true
+    });
+  }
+};
+
+// Helper functions
+function calculateAISuggestedPriority(sentiment, emotion, intensity) {
+  if (sentiment.label === 'NEGATIVE' && ['anger', 'fear'].includes(emotion) && intensity > 0.7) {
+    return 'Critical';
+  }
+  if (sentiment.label === 'NEGATIVE' && intensity > 0.6) {
+    return 'High';
+  }
+  if (sentiment.label === 'POSITIVE') {
+    return 'Low';
+  }
+  return 'Medium';
+}
+
+function shouldEscalateTicket(sentiment, emotion, intensity, category) {
+  const criticalEmotions = ['anger', 'fear', 'sadness'];
+  const criticalCategories = ['security concern', 'data recovery', 'system access'];
+  
+  return (
+    (sentiment.label === 'NEGATIVE' && criticalEmotions.includes(emotion) && intensity > 0.7) ||
+    criticalCategories.includes(category) ||
+    intensity > 0.8
+  );
+}
+
+function determineSupportAction(category, sentiment) {
+  const actionMap = {
+    'password reset': 'Password Reset Process',
+    'software installation': 'Software Support',
+    'hardware issue': 'Hardware Diagnostics',
+    'network connectivity': 'Network Troubleshooting',
+    'email problems': 'Email Configuration',
+    'system access': 'Access Management',
+    'account lockout': 'Account Recovery',
+    'security concern': 'Security Investigation',
+    'data recovery': 'Data Recovery Process'
+  };
+  
+  return actionMap[category] || 'Standard Review';
+}
+
+function generateSimpleAutomatedResponse(category, sentiment) {
+  const responses = {
+    'password reset': 'I can help you reset your password. Please check your email for the reset link, or contact our IT support team.',
+    'software installation': 'For software installation assistance, please ensure you have administrator privileges and follow our installation guide.',
+    'hardware issue': 'I understand you\'re experiencing hardware issues. Please try basic troubleshooting steps or contact our technical team.',
+    'email problems': 'Email issues can be frustrating. Please check your internet connection and email settings, or contact our support team.',
+    'general inquiry': 'Thank you for reaching out. We\'ve received your inquiry and will respond as soon as possible.'
+  };
+  
+  const baseResponse = responses[category] || responses['general inquiry'];
+  
+  if (sentiment.label === 'NEGATIVE') {
+    return `I understand this situation is frustrating. ${baseResponse} We're here to help resolve this quickly.`;
+  }
+  
+  return baseResponse;
+}
+
+function generateAIInsights(sentiment, emotion, category, confidence) {
+  const insights = [];
+  
+  if (confidence < 0.6) {
+    insights.push('Low categorization confidence - may need manual review');
+  }
+  
+  if (sentiment.label === 'NEGATIVE' && ['anger', 'frustration'].includes(emotion)) {
+    insights.push('Customer appears frustrated - prioritize for quick response');
+  }
+  
+  if (['security concern', 'data recovery'].includes(category)) {
+    insights.push('High-priority category - requires specialized attention');
+  }
+  
+  return insights.length > 0 ? insights.join('; ') : 'Standard ticket requiring routine processing';
+}

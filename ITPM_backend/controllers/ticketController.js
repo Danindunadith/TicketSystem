@@ -12,31 +12,78 @@ export const createTicket = async (req, res) => {
       relatedservice,
       priority,
       statement,
+      // Comprehensive AI analysis fields (matching CreateTicket.jsx and chatbot)
+      sentiment,
       sentimentScore,
       aiPredictedCategory,
       categoryConfidence,
-      estimatedResolutionTime,
-      automatedResponse,
+      aiSuggestedPriority,
+      urgency,
       detectedEmotion,
+      emotionIntensity,
+      emotions,
+      automatedResponse,
+      estimatedResolutionTime,
+      supportAction,
+      chatbotSuggestions,
+      shouldEscalate,
       aiInsights,
+      hasAutomatedSolution,
+      automatedSolutionAttempted,
+      sentimentAnalyzedAt,
+      // Legacy fields for backward compatibility
       suggestedSolution
     } = req.body;
     
-    // Process sentiment score if available
+    // Process numeric fields
     const parsedSentimentScore = sentimentScore ? parseFloat(sentimentScore) : null;
     const parsedCategoryConfidence = categoryConfidence ? parseFloat(categoryConfidence) : null;
+    const parsedEmotionIntensity = emotionIntensity ? parseFloat(emotionIntensity) : null;
     
-    // Determine AI suggested priority based on sentiment score
-    let aiSuggestedPriority = null;
-    if (parsedSentimentScore !== null) {
+    // Parse array and object fields
+    let parsedEmotions = null;
+    if (emotions) {
+      try {
+        parsedEmotions = typeof emotions === 'string' ? JSON.parse(emotions) : emotions;
+      } catch (e) {
+        console.warn('Failed to parse emotions array:', e);
+      }
+    }
+    
+    let parsedChatbotSuggestions = null;
+    if (chatbotSuggestions) {
+      try {
+        parsedChatbotSuggestions = typeof chatbotSuggestions === 'string' ? JSON.parse(chatbotSuggestions) : chatbotSuggestions;
+      } catch (e) {
+        console.warn('Failed to parse chatbot suggestions:', e);
+      }
+    }
+    
+    let parsedAiInsights = null;
+    if (aiInsights) {
+      try {
+        parsedAiInsights = typeof aiInsights === 'string' ? JSON.parse(aiInsights) : aiInsights;
+      } catch (e) {
+        console.warn('Failed to parse AI insights:', e);
+      }
+    }
+    
+    // Parse boolean fields
+    const parsedShouldEscalate = shouldEscalate === 'true' || shouldEscalate === true;
+    const parsedHasAutomatedSolution = hasAutomatedSolution === 'true' || hasAutomatedSolution === true || Boolean(automatedResponse || suggestedSolution);
+    const parsedAutomatedSolutionAttempted = automatedSolutionAttempted === 'true' || automatedSolutionAttempted === true || Boolean(automatedResponse || suggestedSolution);
+    
+    // Legacy AI suggested priority calculation (if not provided)
+    let finalAiSuggestedPriority = aiSuggestedPriority;
+    if (!finalAiSuggestedPriority && parsedSentimentScore !== null) {
       if (parsedSentimentScore > 0.9) {
-        aiSuggestedPriority = "Urgent";
+        finalAiSuggestedPriority = "Urgent";
       } else if (parsedSentimentScore > 0.7) {
-        aiSuggestedPriority = "High";
+        finalAiSuggestedPriority = "High";
       } else if (parsedSentimentScore > 0.4) {
-        aiSuggestedPriority = "Medium";
+        finalAiSuggestedPriority = "Medium";
       } else {
-        aiSuggestedPriority = "Low";
+        finalAiSuggestedPriority = "Low";
       }
     }
     
@@ -52,24 +99,47 @@ export const createTicket = async (req, res) => {
       priority,
       attachment,
       statement,
-      // Enhanced AI analysis data (matching both chatbot and CreateTicket.jsx)
+      
+      // Comprehensive AI analysis data (same structure as CreateTicket.jsx)
+      // Basic sentiment analysis
+      sentiment: sentiment || null,
       sentimentScore: parsedSentimentScore,
-      aiSuggestedPriority,
-      sentimentAnalyzedAt: parsedSentimentScore ? new Date() : null,
+      
+      // Category prediction
       aiPredictedCategory: aiPredictedCategory || null,
       categoryConfidence: parsedCategoryConfidence,
+      
+      // Priority and urgency
+      aiSuggestedPriority: finalAiSuggestedPriority || null,
+      urgency: urgency || null,
+      
+      // Emotion analysis
+      detectedEmotion: detectedEmotion || null,
+      emotionIntensity: parsedEmotionIntensity,
+      emotions: parsedEmotions,
+      
+      // AI-generated content
       automatedResponse: automatedResponse || null,
       estimatedResolutionTime: estimatedResolutionTime || null,
-      detectedEmotion: detectedEmotion || null,
-      aiInsights: aiInsights || null,
-      // Flag for AI-enhanced tickets
-      hasAutomatedSolution: Boolean(automatedResponse || suggestedSolution),
-      automatedSolutionAttempted: Boolean(automatedResponse || suggestedSolution)
+      supportAction: supportAction || null,
+      
+      // Additional insights
+      chatbotSuggestions: parsedChatbotSuggestions,
+      shouldEscalate: parsedShouldEscalate,
+      
+      // Complete AI insights object
+      aiInsights: parsedAiInsights,
+      
+      // Automation tracking
+      hasAutomatedSolution: parsedHasAutomatedSolution,
+      automatedSolutionAttempted: parsedAutomatedSolutionAttempted,
+      sentimentAnalyzedAt: sentimentAnalyzedAt ? new Date(sentimentAnalyzedAt) : (parsedSentimentScore ? new Date() : null)
     });
     
     await ticket.save();
     res.status(201).json(ticket);
   } catch (error) {
+    console.error('Error creating ticket:', error);
     res.status(400).json({ message: error.message });
   }
 };
@@ -130,12 +200,21 @@ export const deleteTicket = async (req, res) => {
 export const getTicketsByEmail = async (req, res) => {
   try {
     const tickets = await Ticket.find({ email: req.params.email });
-    if (!tickets || tickets.length === 0) {
-      return res.status(404).json({ message: "No tickets found for this email" });
-    }
-    res.status(200).json(tickets);
+    
+    // Return consistent format for chatbot compatibility
+    res.status(200).json({
+      success: true,
+      email: req.params.email,
+      tickets: tickets || [],
+      totalTickets: tickets.length,
+      message: tickets.length === 0 ? "No tickets found for this email" : `Found ${tickets.length} tickets`
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ 
+      success: false,
+      message: error.message,
+      tickets: []
+    });
   }
 };
 
