@@ -6,14 +6,21 @@ export default function UserTicketReplies() {
     const [tickets, setTickets] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    // 1. Fetch all replies
+    // Get logged-in user's email from localStorage
+    const userEmail = localStorage.getItem("userEmail");
+
+    // 1. Fetch all replies, then filter by user email
     useEffect(() => {
         setLoading(true);
         axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/reticket/replyticket`)
-            .then(res => setReplies(res.data))
+            .then(res => {
+                // Only keep replies where userSendEmail or email matches logged-in user
+                const filtered = res.data.filter(reply => reply.userSendEmail === userEmail || reply.email === userEmail);
+                setReplies(filtered);
+            })
             .catch(() => setReplies([]))
             .finally(() => setLoading(false));
-    }, []);
+    }, [userEmail]);
 
     // 2. For each reply, fetch the ticket statement
     useEffect(() => {

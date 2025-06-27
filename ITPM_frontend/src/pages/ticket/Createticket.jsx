@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import toast from "react-hot-toast";
 import emailjs from '@emailjs/browser';
+import { jwtDecode } from "jwt-decode";
 
 export default function CreateTicketPage() {
   const [formData, setFormData] = useState({
@@ -118,6 +119,24 @@ export default function CreateTicketPage() {
     e.preventDefault();
     setLoading(true);
 
+    // Get token and decode user id
+    const token = localStorage.getItem("token");
+    console.log("Token used for reply submission:", token);
+    const decoded = jwtDecode(token);
+    console.log("Decoded token:", decoded);
+    let userId = null;
+    if (token) {
+      try {
+        const decoded = jwtDecode(token);
+        console.log("Decoded token :", decoded); // Log the whole token
+        // Extract userId from the most likely properties
+        userId = decoded?._id || decoded.userId || decoded.id || decoded.sub || null;
+        console.log("Extracted userId:", userId);
+      } catch (err) {
+        console.error("Failed to decode token:", err);
+      }
+    }
+
     const apiUrl = "/api/tickets/";
     console.log("Sending POST request to:", apiUrl);
 
@@ -134,7 +153,11 @@ export default function CreateTicketPage() {
         formDataToSend.append("attachment", formData.attachment);
       }
       formDataToSend.append("statement", formData.statement);
-      
+      // Pass userId to backend
+      if (userId) {
+        formDataToSend.append("userId", userId);
+        console.log("Appended userId to FormData:", userId);
+      }
       // Include sentiment data if available
       if (analysisResults) {
         formDataToSend.append("sentimentScore", analysisResults.score);
