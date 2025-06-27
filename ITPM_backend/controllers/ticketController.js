@@ -1,4 +1,6 @@
 import Ticket from "../models/ticket.js";
+import ReplyTicket from "../models/replyTicket.js";
+
 
 // Create a new ticket
 export const createTicket = async (req, res) => {
@@ -12,7 +14,8 @@ export const createTicket = async (req, res) => {
       relatedservice,
       priority,
       statement,
-      sentimentScore
+      sentimentScore,
+      userId
     } = req.body;
     
     // Process sentiment score if available
@@ -47,7 +50,8 @@ export const createTicket = async (req, res) => {
       // Add sentiment analysis data
       sentimentScore: parsedSentimentScore,
       aiSuggestedPriority,
-      sentimentAnalyzedAt: parsedSentimentScore ? new Date() : null
+      sentimentAnalyzedAt: parsedSentimentScore ? new Date() : null,
+      userId
     });
     
     await ticket.save();
@@ -246,6 +250,41 @@ export const getSentimentStatistics = async (req, res) => {
       priorityMatchRate: 0,
       totalAnalyzed: 0
     });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Get tickets by userId
+export const getTicketsByUserId = async (req, res) => {
+  try {
+    const tickets = await Ticket.find({ userId: req.params.userId });
+    if (!tickets || tickets.length === 0) {
+      return res.status(404).json({ message: "No tickets found for this user" });
+    }
+    res.status(200).json(tickets);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+
+export const getUserTicketsWithReplies = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+
+    // Find all tickets for this user
+    const tickets = await Ticket.find({ userId }).lean();
+
+    // For each ticket, fetch its replies
+    const ticketsWithReplies = await Promise.all(
+      tickets.map(async (ticket) => {
+        const replies = await ReplyTicket.find({ ticketId: ticket._id });
+        return { ...ticket, replies };
+      })
+    );
+
+    res.status(200).json(ticketsWithReplies);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
