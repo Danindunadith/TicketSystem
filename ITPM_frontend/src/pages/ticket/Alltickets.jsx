@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 export default function AllTicketsPage() {
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [filterAdmin, setFilterAdmin] = useState("all");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -127,8 +128,29 @@ export default function AllTicketsPage() {
     }
   };
 
-  // Get grouped tickets
-  const groupedTickets = groupTicketsByDate(tickets);
+  // Get unique admin names for filter dropdown
+  const getUniqueAdmins = () => {
+    const admins = tickets
+      .map(ticket => ticket.firstName)
+      .filter(name => name && name.trim() !== "")
+      .filter((name, index, arr) => arr.indexOf(name) === index)
+      .sort();
+    return admins;
+  };
+
+  // Filter tickets based on selected admin
+  const getFilteredTickets = () => {
+    if (filterAdmin === "all" || filterAdmin.trim() === "") {
+      return tickets;
+    }
+    return tickets.filter(ticket => 
+      ticket.firstName && 
+      ticket.firstName.toLowerCase().includes(filterAdmin.toLowerCase())
+    );
+  };
+
+  // Get grouped tickets (now using filtered tickets)
+  const groupedTickets = groupTicketsByDate(getFilteredTickets());
 
   return (
     <div className="min-h-screen bg-gray-50 py-6 px-2 sm:px-4 lg:px-6">
@@ -176,15 +198,36 @@ export default function AllTicketsPage() {
           </div>
         ) : (
           <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-            {/* Table Header */}
+            {/* Filter Section */}
             <div className="bg-gray-50 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
-              <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center justify-between flex-wrap gap-4">
                 <h3 className="text-base sm:text-lg font-semibold text-gray-800">
-                  Tickets Overview ({tickets.length})
+                  Tickets Overview ({getFilteredTickets().length} of {tickets.length})
                 </h3>
-                <div className="text-xs sm:text-sm text-gray-500">
-                  Last updated: {new Date().toLocaleDateString()}
+                <div className="flex items-center gap-3">
+                  <label htmlFor="adminFilter" className="text-sm font-medium text-gray-700">
+                    Filter by Admin:
+                  </label>
+                  <input
+                    type="text"
+                    id="adminFilter"
+                    value={filterAdmin === "all" ? "" : filterAdmin}
+                    onChange={(e) => setFilterAdmin(e.target.value)}
+                    placeholder="Type admin name..."
+                    className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#1A69A7] focus:border-[#1A69A7] bg-white min-w-48"
+                  />
+                  {filterAdmin !== "all" && filterAdmin.trim() !== "" && (
+                    <button
+                      onClick={() => setFilterAdmin("all")}
+                      className="px-3 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded-md transition-colors duration-200"
+                    >
+                      Clear Filter
+                    </button>
+                  )}
                 </div>
+              </div>
+              <div className="text-xs sm:text-sm text-gray-500 mt-2">
+                Last updated: {new Date().toLocaleDateString()}
               </div>
             </div>
 
@@ -316,7 +359,12 @@ export default function AllTicketsPage() {
             <div className="bg-gray-50 px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-200">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div className="text-xs sm:text-sm text-gray-600">
-                  Showing {tickets.length} {tickets.length === 1 ? 'ticket' : 'tickets'}
+                  Showing {getFilteredTickets().length} of {tickets.length} {tickets.length === 1 ? 'ticket' : 'tickets'}
+                  {filterAdmin !== "all" && filterAdmin.trim() !== "" && (
+                    <span className="ml-2 text-[#1A69A7] font-medium">
+                      (Filtered by: "{filterAdmin}")
+                    </span>
+                  )}
                 </div>
                 <div className="text-xs sm:text-sm text-gray-500">
                   Total tickets in system: {tickets.length}

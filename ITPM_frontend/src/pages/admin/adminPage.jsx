@@ -14,6 +14,8 @@ import Profile from "./Profile";
 import toast from "react-hot-toast";
 import AllTicketsPage from "../ticket/Alltickets";
 import OneTicketPage from "../ticket/Oneticket";
+import AIAnalyticsDashboard from "../../components/AIAnalyticsDashboard";
+import { Brain } from 'lucide-react';
 
 export default function AdminPage() {
   const location = useLocation();
@@ -75,6 +77,19 @@ export default function AdminPage() {
                   : 'text-white/70 group-hover:text-white'
               }`} />
               <span className="ml-4 font-semibold text-base">Tickets Management</span>
+            </Link>
+
+            <Link to="/admin/ai-analytics" className={`flex items-center px-4 py-4 rounded-xl transition-all duration-300 group ${
+              isActive('/admin/ai-analytics') 
+                ? 'bg-white/20 text-white shadow-lg backdrop-blur-sm border border-white/30' 
+                : 'text-white/80 hover:bg-white/10 hover:text-white hover:shadow-md'
+            }`}>
+              <Brain className={`text-2xl transition-all duration-300 ${
+                isActive('/admin/ai-analytics') 
+                  ? 'text-white' 
+                  : 'text-white/70 group-hover:text-white'
+              }`} />
+              <span className="ml-4 font-semibold text-base">AI Analytics</span>
             </Link>
           </div>
           
@@ -193,6 +208,7 @@ export default function AdminPage() {
             <Route path = "/dashboard" element = {<Dashboard/>}/>
             <Route path = "/tickets" element = {<AllTicketsPage/>}/>
             <Route path ="/oneticket/:id" element = {<OneTicketPage/>}/>
+            <Route path="/ai-analytics" element={<AIAnalyticsDashboard />} />
 
           </Routes>
         </main>

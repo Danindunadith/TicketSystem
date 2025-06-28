@@ -14,24 +14,80 @@ export const createTicket = async (req, res) => {
       relatedservice,
       priority,
       statement,
+      // Comprehensive AI analysis fields (matching CreateTicket.jsx and chatbot)
+     /*   sentimentScore,
+      userId *////old changes i removed and commented out
+      sentiment,
       sentimentScore,
-      userId
+      aiPredictedCategory,
+      categoryConfidence,
+      aiSuggestedPriority,
+      urgency,
+      detectedEmotion,
+      emotionIntensity,
+      emotions,
+      automatedResponse,
+      estimatedResolutionTime,
+      supportAction,
+      chatbotSuggestions,
+      shouldEscalate,
+      aiInsights,
+      hasAutomatedSolution,
+      automatedSolutionAttempted,
+      sentimentAnalyzedAt,
+      // Legacy fields for backward compatibility
+      suggestedSolution
     } = req.body;
     
-    // Process sentiment score if available
+    // Process numeric fields
     const parsedSentimentScore = sentimentScore ? parseFloat(sentimentScore) : null;
+    const parsedCategoryConfidence = categoryConfidence ? parseFloat(categoryConfidence) : null;
+    const parsedEmotionIntensity = emotionIntensity ? parseFloat(emotionIntensity) : null;
     
-    // Determine AI suggested priority based on sentiment score
-    let aiSuggestedPriority = null;
-    if (parsedSentimentScore !== null) {
+    // Parse array and object fields
+    let parsedEmotions = null;
+    if (emotions) {
+      try {
+        parsedEmotions = typeof emotions === 'string' ? JSON.parse(emotions) : emotions;
+      } catch (e) {
+        console.warn('Failed to parse emotions array:', e);
+      }
+    }
+    
+    let parsedChatbotSuggestions = null;
+    if (chatbotSuggestions) {
+      try {
+        parsedChatbotSuggestions = typeof chatbotSuggestions === 'string' ? JSON.parse(chatbotSuggestions) : chatbotSuggestions;
+      } catch (e) {
+        console.warn('Failed to parse chatbot suggestions:', e);
+      }
+    }
+    
+    let parsedAiInsights = null;
+    if (aiInsights) {
+      try {
+        parsedAiInsights = typeof aiInsights === 'string' ? JSON.parse(aiInsights) : aiInsights;
+      } catch (e) {
+        console.warn('Failed to parse AI insights:', e);
+      }
+    }
+    
+    // Parse boolean fields
+    const parsedShouldEscalate = shouldEscalate === 'true' || shouldEscalate === true;
+    const parsedHasAutomatedSolution = hasAutomatedSolution === 'true' || hasAutomatedSolution === true || Boolean(automatedResponse || suggestedSolution);
+    const parsedAutomatedSolutionAttempted = automatedSolutionAttempted === 'true' || automatedSolutionAttempted === true || Boolean(automatedResponse || suggestedSolution);
+    
+    // Legacy AI suggested priority calculation (if not provided)
+    let finalAiSuggestedPriority = aiSuggestedPriority;
+    if (!finalAiSuggestedPriority && parsedSentimentScore !== null) {
       if (parsedSentimentScore > 0.9) {
-        aiSuggestedPriority = "Urgent";
+        finalAiSuggestedPriority = "Urgent";
       } else if (parsedSentimentScore > 0.7) {
-        aiSuggestedPriority = "High";
+        finalAiSuggestedPriority = "High";
       } else if (parsedSentimentScore > 0.4) {
-        aiSuggestedPriority = "Medium";
+        finalAiSuggestedPriority = "Medium";
       } else {
-        aiSuggestedPriority = "Low";
+        finalAiSuggestedPriority = "Low";
       }
     }
     
@@ -47,16 +103,47 @@ export const createTicket = async (req, res) => {
       priority,
       attachment,
       statement,
-      // Add sentiment analysis data
+      
+      // Comprehensive AI analysis data (same structure as CreateTicket.jsx)
+      // Basic sentiment analysis
+      sentiment: sentiment || null,
       sentimentScore: parsedSentimentScore,
-      aiSuggestedPriority,
-      sentimentAnalyzedAt: parsedSentimentScore ? new Date() : null,
-      userId
+      
+      // Category prediction
+      aiPredictedCategory: aiPredictedCategory || null,
+      categoryConfidence: parsedCategoryConfidence,
+      
+      // Priority and urgency
+      aiSuggestedPriority: finalAiSuggestedPriority || null,
+      urgency: urgency || null,
+      
+      // Emotion analysis
+      detectedEmotion: detectedEmotion || null,
+      emotionIntensity: parsedEmotionIntensity,
+      emotions: parsedEmotions,
+      
+      // AI-generated content
+      automatedResponse: automatedResponse || null,
+      estimatedResolutionTime: estimatedResolutionTime || null,
+      supportAction: supportAction || null,
+      
+      // Additional insights
+      chatbotSuggestions: parsedChatbotSuggestions,
+      shouldEscalate: parsedShouldEscalate,
+      
+      // Complete AI insights object
+      aiInsights: parsedAiInsights,
+      
+      // Automation tracking
+      hasAutomatedSolution: parsedHasAutomatedSolution,
+      automatedSolutionAttempted: parsedAutomatedSolutionAttempted,
+      sentimentAnalyzedAt: sentimentAnalyzedAt ? new Date(sentimentAnalyzedAt) : (parsedSentimentScore ? new Date() : null)
     });
     
     await ticket.save();
     res.status(201).json(ticket);
   } catch (error) {
+    console.error('Error creating ticket:', error);
     res.status(400).json({ message: error.message });
   }
 };
@@ -117,12 +204,21 @@ export const deleteTicket = async (req, res) => {
 export const getTicketsByEmail = async (req, res) => {
   try {
     const tickets = await Ticket.find({ email: req.params.email });
-    if (!tickets || tickets.length === 0) {
-      return res.status(404).json({ message: "No tickets found for this email" });
-    }
-    res.status(200).json(tickets);
+    
+    // Return consistent format for chatbot compatibility
+    res.status(200).json({
+      success: true,
+      email: req.params.email,
+      tickets: tickets || [],
+      totalTickets: tickets.length,
+      message: tickets.length === 0 ? "No tickets found for this email" : `Found ${tickets.length} tickets`
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ 
+      success: false,
+      message: error.message,
+      tickets: []
+    });
   }
 };
 
@@ -255,37 +351,115 @@ export const getSentimentStatistics = async (req, res) => {
   }
 };
 
-// Get tickets by userId
-export const getTicketsByUserId = async (req, res) => {
+// Send email confirmation after ticket creation
+export const sendConfirmationEmail = async (req, res) => {
   try {
-    const tickets = await Ticket.find({ userId: req.params.userId });
-    if (!tickets || tickets.length === 0) {
-      return res.status(404).json({ message: "No tickets found for this user" });
+    const { ticketId, email, name, subject } = req.body;
+    
+    if (!ticketId || !email) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Ticket ID and email are required" 
+      });
     }
-    res.status(200).json(tickets);
+
+    // Try to find ticket by MongoDB _id first, then by ticketid field
+    let ticket;
+    try {
+      // Try finding by MongoDB ObjectId first
+      ticket = await Ticket.findById(ticketId);
+    } catch (error) {
+      // If ObjectId parsing fails, try finding by ticketid field
+      ticket = await Ticket.findOne({ ticketid: ticketId });
+    }
+    
+    // If still not found, try finding by ticketid as string
+    if (!ticket) {
+      ticket = await Ticket.findOne({ ticketid: parseInt(ticketId) });
+    }
+    
+    if (!ticket) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Ticket not found" 
+      });
+    }
+
+    // Create email content
+    const emailContent = {
+      to: email,
+      subject: `Ticket Confirmation - ${subject || ticket.subject}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px;">
+            <h2 style="color: #333; margin-bottom: 20px;">Ticket Created Successfully</h2>
+            
+            <p>Dear ${name || ticket.name},</p>
+            
+            <p>Your support ticket has been successfully created and submitted to our system. Here are the details:</p>
+            
+            <div style="background-color: white; padding: 15px; border-radius: 5px; margin: 20px 0;">
+              <strong>Ticket ID:</strong> ${ticket.ticketid || ticket._id}<br>
+              <strong>Subject:</strong> ${ticket.subject}<br>
+              <strong>Department:</strong> ${ticket.department}<br>
+              <strong>Priority:</strong> ${ticket.priority}<br>
+              <strong>Status:</strong> ${ticket.status || 'Open'}<br>
+              <strong>Created:</strong> ${new Date(ticket.date || ticket.createdAt).toLocaleString()}
+            </div>
+            
+            <p>Our support team will review your ticket and respond within the estimated timeframe based on your ticket priority:</p>
+            <ul>
+              <li><strong>Low Priority:</strong> 24-48 hours</li>
+              <li><strong>Medium Priority:</strong> 4-8 hours</li>
+              <li><strong>High Priority:</strong> 1-4 hours</li>
+              <li><strong>Critical/Urgent:</strong> 30 minutes - 1 hour</li>
+            </ul>
+            
+            <p>You can check your ticket status using our chatbot by providing your email address.</p>
+            
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
+              <p>Thank you for contacting our support team!</p>
+              <p style="color: #666; font-size: 14px;">
+                This is an automated message. Please do not reply to this email directly.
+              </p>
+            </div>
+          </div>
+        </div>
+      `
+    };
+
+    // Note: In a real implementation, you would use a service like SendGrid, Nodemailer, etc.
+    // For now, we'll simulate successful email sending
+    console.log('Email confirmation would be sent:', emailContent);
+    
+    // You can integrate with your preferred email service here
+    // Example with Nodemailer (commented out):
+    /*
+    const nodemailer = require('nodemailer');
+    const transporter = nodemailer.createTransporter({
+      // Your email service configuration
+    });
+    
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM_EMAIL,
+      to: email,
+      subject: emailContent.subject,
+      html: emailContent.html
+    });
+    */
+
+    res.status(200).json({
+      success: true,
+      message: "Confirmation email sent successfully",
+      ticketId: ticket.ticketid || ticket._id
+    });
+
   } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-
-export const getUserTicketsWithReplies = async (req, res) => {
-  try {
-    const userId = req.params.userId;
-
-    // Find all tickets for this user
-    const tickets = await Ticket.find({ userId }).lean();
-
-    // For each ticket, fetch its replies
-    const ticketsWithReplies = await Promise.all(
-      tickets.map(async (ticket) => {
-        const replies = await ReplyTicket.find({ ticketId: ticket._id });
-        return { ...ticket, replies };
-      })
-    );
-
-    res.status(200).json(ticketsWithReplies);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Email confirmation error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Failed to send confirmation email",
+      error: error.message 
+    });
   }
 };

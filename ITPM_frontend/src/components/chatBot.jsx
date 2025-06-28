@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Paperclip, Bot, User, Sparkles, Loader2, CheckCircle2, ArrowRight, RefreshCw } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
-import emailjs from '@emailjs/browser';
+import { sendTicketConfirmationEmail, EMAILJS_CONFIG } from '../config/emailjs';
 
 export default function ChatBot() {
   const [isOpen, setIsOpen] = useState(false);
@@ -33,16 +33,6 @@ export default function ChatBot() {
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const chatContainerRef = useRef(null);
-
-  // EMAILJS configuration - Replace with your actual values
-  const EMAILJS_SERVICE_ID = 'service_jrj10f4';
-  const EMAILJS_TEMPLATE_ID = 'template_l0ctqxs';
-  const EMAILJS_PUBLIC_KEY = 'KHn7-uw2zB2TcNn3K';
-
-  // Initialize EmailJS
-  useEffect(() => {
-    emailjs.init(EMAILJS_PUBLIC_KEY);
-  }, []);
 
   // Auto-scroll to bottom of messages
   useEffect(() => {
@@ -485,25 +475,26 @@ export default function ChatBot() {
       const ticket = response.data;
       const ticketId = ticket.ticketid || ticket._id || ticket.id || 'TK' + Date.now();
       
-      // Send email confirmation
+      // Send confirmation email using centralized function
       try {
-        const templateParams = {
-          to_name: ticketData.name,
-          to_email: ticketData.email,
-          ticketId: String(ticketId),
+        const emailResult = await sendTicketConfirmationEmail({
+          email: ticketData.email,
+          name: ticketData.name,
+          ticketId: ticketId,
           subject: ticketData.subject,
           department: ticketData.department,
           priority: ticketData.priority,
-          reply_to: 'support@yourcompany.com'
-        };
+          date: ticketData.date,
+          statement: ticketData.statement,
+          aiPredictedCategory: sentimentResults?.predictedCategory || 'General',
+          automatedResponse: sentimentResults?.suggestedSolution || 'Standard support response'
+        });
         
-        await emailjs.send(
-          EMAILJS_SERVICE_ID,
-          EMAILJS_TEMPLATE_ID,
-          templateParams
-        );
+        if (!emailResult.success) {
+          console.error('Email sending failed:', emailResult.error);
+        }
       } catch (emailError) {
-        console.error('Email sending failed:', emailError);
+        console.error('Email confirmation failed:', emailError);
       }
       
       // Remove loading message

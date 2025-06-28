@@ -1,5 +1,6 @@
 import axios from 'axios';
 import dotenv from 'dotenv';
+import Ticket from '../models/ticket.js';
 
 dotenv.config();
 
@@ -113,6 +114,83 @@ export const analyzeSentiment = async (req, res) => {
       priority: sentimentResult.priority,
       suggestedSolution,
       fromFallback: true
+    });
+  }
+};
+
+// NEW: Get sentiment statistics for analytics dashboard
+export const getSentimentStats = async (req, res) => {
+  try {
+    console.log('Fetching sentiment statistics...');
+    
+    // Get all tickets with sentiment data
+    const tickets = await Ticket.find({}).lean();
+    
+    if (tickets.length === 0) {
+      return res.json({
+        avgSentiment: 0.5,
+        totalAnalyzed: 0,
+        sentimentDistribution: {
+          positive: 0,
+          negative: 0,
+          neutral: 0
+        },
+        emotionDistribution: {}
+      });
+    }
+    
+    // Calculate sentiment statistics
+    let totalSentiment = 0;
+    let analyzedCount = 0;
+    const sentimentCounts = { positive: 0, negative: 0, neutral: 0 };
+    const emotionCounts = {};
+    
+    tickets.forEach(ticket => {
+      // Count sentiments
+      if (ticket.detectedSentiment) {
+        analyzedCount++;
+        const sentiment = ticket.detectedSentiment.toLowerCase();
+        if (sentimentCounts.hasOwnProperty(sentiment)) {
+          sentimentCounts[sentiment]++;
+        }
+        
+        // Add to total for average calculation
+        if (ticket.sentimentScore !== undefined) {
+          totalSentiment += ticket.sentimentScore;
+        } else {
+          // Default scores if not stored
+          totalSentiment += sentiment === 'positive' ? 0.8 : 
+                           sentiment === 'negative' ? 0.2 : 0.5;
+        }
+      }
+      
+      // Count emotions
+      if (ticket.detectedEmotion) {
+        const emotion = ticket.detectedEmotion.toLowerCase();
+        emotionCounts[emotion] = (emotionCounts[emotion] || 0) + 1;
+      }
+    });
+    
+    const avgSentiment = analyzedCount > 0 ? totalSentiment / analyzedCount : 0.5;
+    
+    const stats = {
+      avgSentiment,
+      totalAnalyzed: analyzedCount,
+      sentimentDistribution: sentimentCounts,
+      emotionDistribution: emotionCounts
+    };
+    
+    console.log('Sentiment stats calculated:', stats);
+    res.json(stats);
+    
+  } catch (error) {
+    console.error('Error fetching sentiment stats:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch sentiment statistics',
+      avgSentiment: 0.5,
+      totalAnalyzed: 0,
+      sentimentDistribution: { positive: 0, negative: 0, neutral: 0 },
+      emotionDistribution: {}
     });
   }
 };
