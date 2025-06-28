@@ -1,51 +1,87 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { jwtDecode } from "jwt-decode";
 
 export default function UserTicketReplies() {
     const [replies, setReplies] = useState([]);
     const [tickets, setTickets] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    // Get logged-in user's email from localStorage
-    const userEmail = localStorage.getItem("userEmail");
+    // Get logged-in user ID from token
+    const getUserId = () => {
+        const token = localStorage.getItem("token");
+        if (token) {
+            try {
+                const decoded = jwtDecode(token);
+                return decoded.userId || decoded.id || decoded._id;
+            } catch (error) {
+                console.error("Error decoding token:", error);
+                return null;
+            }
+        }
+        return null;
+    };
 
-    // 1. Fetch all replies, then filter by user email
+    const userId = getUserId();
+
+    // 1. Fetch all replies, then filter by matching ticket userId
     useEffect(() => {
+        if (!userId) {
+            setLoading(false);
+            return;
+        }
+
         setLoading(true);
         axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/reticket/replyticket`)
             .then(res => {
-                // Only keep replies where userSendEmail or email matches logged-in user
-                const filtered = res.data.filter(reply => reply.userSendEmail === userEmail || reply.email === userEmail);
-                setReplies(filtered);
+                console.log("All replies:", res.data);
+                setReplies(res.data);
             })
-            .catch(() => setReplies([]))
+            .catch(err => {
+                console.error("Error fetching replies:", err);
+                setReplies([]);
+            })
             .finally(() => setLoading(false));
-    }, [userEmail]);
+    }, [userId]);
 
-    // 2. For each reply, fetch the ticket statement
+    // 2. For each reply, fetch the ticket and check if userId matches
     useEffect(() => {
-        if (replies.length === 0) return;
+        if (replies.length === 0 || !userId) return;
+        
         Promise.all(
             replies.map(reply =>
                 axios
                     .get(`${import.meta.env.VITE_BACKEND_URL}/api/tickets/${reply.ticketId}`)
-                    .then(res => ({
-                        ...reply,
-                        statement: res.data.statement,
-                        ticketStatus: res.data.status,
-                        ticketSubject: res.data.subject,
-                        ticketCreatedAt: res.data.date
-                    }))
-                    .catch(() => ({
-                        ...reply,
-                        statement: "Statement not found",
-                        ticketStatus: "Unknown",
-                        ticketSubject: "Unknown",
-                        ticketCreatedAt: ""
-                    }))
+                    .then(res => {
+                        const ticket = res.data;
+                        console.log("Fetched ticket:", ticket._id);
+                        console.log(`Ticket ${reply.ticketId} userId: ${ticket.userId || 'not set'}, Current user: ${userId}`);
+                        
+                        // Only include if ticket's userId matches current user's userId
+                        if (ticket.userId === userId) {
+                            return {
+                                ...reply,
+                                statement: ticket.statement,
+                                ticketStatus: ticket.status,
+                                ticketSubject: ticket.subject,
+                                ticketCreatedAt: ticket.date,
+                                ticketUserId: ticket.userId
+                            };
+                        }
+                        return null; // Filter out non-matching tickets
+                    })
+                    .catch(err => {
+                        console.error(`Error fetching ticket ${reply.ticketId}:`, err);
+                        return null;
+                    })
             )
-        ).then(repliesWithStatements => setTickets(repliesWithStatements));
-    }, [replies]);
+        ).then(repliesWithStatements => {
+            // Filter out null values (non-matching tickets)
+            const filteredTickets = repliesWithStatements.filter(ticket => ticket !== null);
+            console.log("Filtered tickets for user:", filteredTickets);
+            setTickets(filteredTickets);
+        });
+    }, [replies, userId]);
 
     // Helper function to format dates
     const formatDate = (dateString) => {
@@ -110,13 +146,21 @@ export default function UserTicketReplies() {
         return <div className="p-8 text-center text-gray-500">Loading replies...</div>;
     }
 
+    if (!userId) {
+        return (
+            <div className="p-8 text-center text-red-500">
+                <p>Please log in to view your ticket replies.</p>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 md:p-6">
             <div className="max-w-4xl mx-auto">
                 {/* Header Section */}
                 <div className="mb-8">
                     <h1 className="text-3xl font-bold text-gray-800 mb-2">My Ticket Replies</h1>
-                    <p className="text-gray-600">See all replies and their original ticket statements</p>
+                    <p className="text-gray-600">See all replies for your tickets</p>
                 </div>
 
                 {/* Replies List */}
@@ -148,7 +192,7 @@ export default function UserTicketReplies() {
                                             </svg>
                                         </div>
                                         <div>
-                                            <p className="font-semibold text-gray-800">Ticket Statement</p>
+                                            <p className="font-semibold text-gray-800">Your Ticket</p>
                                             <p className="text-xs text-gray-500">{formatDate(reply.ticketCreatedAt)}</p>
                                         </div>
                                     </div>
@@ -168,7 +212,7 @@ export default function UserTicketReplies() {
                                         <div>
                                             <p className="font-semibold text-gray-800">Support Team Reply</p>
                                             <p className="text-xs text-gray-500">
-                                                {formatDate(reply.createdAt)}
+                                                By: {reply.firstName} • {formatDate(reply.createdAt)}
                                             </p>
                                         </div>
                                     </div>
@@ -186,11 +230,11 @@ export default function UserTicketReplies() {
                     <div className="text-center py-12">
                         <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
                             <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2-2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                             </svg>
                         </div>
                         <h3 className="text-lg font-medium text-gray-900 mb-2">No Ticket Replies</h3>
-                        <p className="text-gray-500">No replies have been submitted yet.</p>
+                        <p className="text-gray-500">No replies have been submitted for your tickets yet.</p>
                     </div>
                 )}
             </div>
