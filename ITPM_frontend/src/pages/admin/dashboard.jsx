@@ -215,22 +215,23 @@ export default function Dashboard() {
             ) : highPriorityConcerns.length === 0 ? (
               <div className="p-4 text-gray-500">No high priority concerns found.</div>
             ) : (
-              highPriorityConcerns.map((concern, index) => (
-                <div key={concern.id} className="flex items-center p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                  <div className="p-2 rounded-lg bg-red-100 text-red-600">
-                    <span className="font-bold">!</span>
-                  </div>
-                  <div className="ml-3 flex-1">
-                    <p className="text-sm font-medium text-gray-800">{concern.event}</p>
-                    <p className="text-xs text-gray-500">{concern.name}</p>
-                  </div>
-                  <div>
-                    <span className="inline-block px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
-                      {concern.priority}
-                    </span>
-                  </div>
-                </div>
-              ))
+             // Replace the existing highPriorityConcerns.map() section with this:
+                  highPriorityConcerns.slice(0, 10).map((concern, index) => (
+                    <div key={concern.id} className="flex items-center p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                      <div className="p-2 rounded-lg bg-red-100 text-red-600">
+                        <span className="font-bold">!</span>
+                      </div>
+                      <div className="ml-3 flex-1">
+                        <p className="text-sm font-medium text-gray-800">{concern.event}</p>
+                        <p className="text-xs text-gray-500">{concern.name}</p>
+                      </div>
+                      <div>
+                        <span className="inline-block px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
+                          {concern.priority}
+                        </span>
+                      </div>
+                    </div>
+                  ))
             )}
           </div>
         </div>
