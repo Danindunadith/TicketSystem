@@ -121,14 +121,13 @@ export default function CreateTicketPage() {
 
     // Get token and decode user id
     const token = localStorage.getItem("token");
-    console.log("Token used for reply submission:", token);
-    const decoded = jwtDecode(token);
-    console.log("Decoded token:", decoded);
+    console.log("Token used for ticket creation:", token);
     let userId = null;
+    
     if (token) {
       try {
         const decoded = jwtDecode(token);
-        console.log("Decoded token :", decoded); // Log the whole token
+        console.log("Decoded token:", decoded); // Log the whole token
         // Extract userId from the most likely properties
         userId = decoded?._id || decoded.userId || decoded.id || decoded.sub || null;
         console.log("Extracted userId:", userId);
@@ -153,11 +152,15 @@ export default function CreateTicketPage() {
         formDataToSend.append("attachment", formData.attachment);
       }
       formDataToSend.append("statement", formData.statement);
+      
       // Pass userId to backend
       if (userId) {
         formDataToSend.append("userId", userId);
         console.log("Appended userId to FormData:", userId);
+      } else {
+        console.warn("No userId found in token");
       }
+      
       // Include sentiment data if available
       if (analysisResults) {
         formDataToSend.append("sentimentScore", analysisResults.score);
