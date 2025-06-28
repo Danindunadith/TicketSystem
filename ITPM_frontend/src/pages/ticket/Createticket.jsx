@@ -288,7 +288,7 @@ export default function CreateTicketPage() {
     
     if (department === 'HR') {
       if (text.includes('payroll') || text.includes('salary')) return 'Payroll';
-      if (text.includes('benefits') || text.includes('insurance')) return 'Benefits';
+      if (text.includes('benefits' || text.includes('insurance'))) return 'Benefits';
       if (text.includes('leave') || text.includes('vacation')) return 'Leave Management';
       if (text.includes('training') || text.includes('development')) return 'Training';
       return 'General HR';
@@ -310,15 +310,13 @@ export default function CreateTicketPage() {
 
     // Get token and decode user id
     const token = localStorage.getItem("token");
-    console.log("Token used for reply submission:", token);
-    const decoded = jwtDecode(token);
-    console.log("Decoded token:", decoded);
+    console.log("Token used for ticket creation:", token);
     let userId = null;
+    
     if (token) {
       try {
         const decoded = jwtDecode(token);
-        console.log("Decoded token :", decoded); // Log the whole token
-        // Extract userId from the most likely properties
+        console.log("Decoded token:", decoded);
         userId = decoded?._id || decoded.userId || decoded.id || decoded.sub || null;
         console.log("Extracted userId:", userId);
       } catch (err) {
@@ -326,8 +324,7 @@ export default function CreateTicketPage() {
       }
     }
 
-/*     const apiUrl = "/api/tickets/"; */
-    const apiUrl = "http://localhost:3002/api/tickets/";
+    const apiUrl = "/api/tickets/";
     console.log("Sending POST request to:", apiUrl);
 
     try {
@@ -364,12 +361,6 @@ export default function CreateTicketPage() {
             };
             setAnalysisResults(currentAnalysisResults);
             console.log("✅ AI analysis completed successfully");
-            console.log("AI analysis results:", {
-              sentiment: currentAnalysisResults.sentiment,
-              category: currentAnalysisResults.predictedCategory?.category,
-              shouldEscalate: currentAnalysisResults.shouldEscalate,
-              hasAutomatedResponse: !!currentAnalysisResults.automatedResponse
-            });
           } else {
             console.warn("AI analysis response missing success field");
           }
@@ -394,7 +385,15 @@ export default function CreateTicketPage() {
       }
       formDataToSend.append("statement", formData.statement);
       
-      // Include comprehensive AI analysis data if available (same as chatbot)
+      // Pass userId to backend
+      if (userId) {
+        formDataToSend.append("userId", userId);
+        console.log("Appended userId to FormData:", userId);
+      } else {
+        console.warn("No userId found in token");
+      }
+      
+      // Include comprehensive AI analysis data if available
       if (currentAnalysisResults) {
         // Basic sentiment and category
         formDataToSend.append("sentiment", currentAnalysisResults.sentiment);
@@ -443,21 +442,6 @@ export default function CreateTicketPage() {
         
         // Add timestamp for AI analysis
         formDataToSend.append("sentimentAnalyzedAt", new Date().toISOString());
-        
-        // Log comprehensive AI data being sent
-        console.log("Comprehensive AI analysis data being sent:", {
-          sentiment: currentAnalysisResults.sentiment,
-          sentimentScore: currentAnalysisResults.sentimentScore,
-          aiPredictedCategory: currentAnalysisResults.predictedCategory?.category,
-          categoryConfidence: currentAnalysisResults.predictedCategory?.confidence,
-          aiSuggestedPriority: currentAnalysisResults.aiSuggestedPriority,
-          detectedEmotion: currentAnalysisResults.detectedEmotion,
-          emotionIntensity: currentAnalysisResults.emotionIntensity,
-          estimatedResolutionTime: currentAnalysisResults.estimatedResolutionTime,
-          shouldEscalate: currentAnalysisResults.shouldEscalate,
-          hasAutomatedSolution: true,
-          automatedSolutionAttempted: true
-        });
       }
 
       const response = await axios.post(apiUrl, formDataToSend, {
@@ -487,8 +471,8 @@ export default function CreateTicketPage() {
           priority: formData.priority,
           date: formData.date,
           statement: formData.statement,
-          aiPredictedCategory: formData.aiPredictedCategory,
-          automatedResponse: formData.automatedResponse
+          aiPredictedCategory: currentAnalysisResults?.predictedCategory?.category || '',
+          automatedResponse: currentAnalysisResults?.automatedResponse || ''
         });
         
         if (emailResult.success) {
@@ -498,15 +482,7 @@ export default function CreateTicketPage() {
         }
       } catch (emailError) {
         console.warn('EmailJS confirmation failed:', emailError);
-        
-        // Check if it's a configuration issue
-        const configTest = testEmailJSConfig();
-        if (!configTest.isConfigured) {
-          console.warn('EmailJS not configured:', configTest.issues);
-          toast.warning("Email confirmation is not configured. Please check the setup guide.");
-        } else {
-          toast.error("Failed to send confirmation email, but ticket was created successfully.");
-        }
+        toast.error("Failed to send confirmation email, but ticket was created successfully.");
       }
       
       navigate("/");
@@ -636,7 +612,7 @@ export default function CreateTicketPage() {
             <div className="mb-8">
               <h3 className="text-md font-medium text-gray-900 mb-4 flex items-center">
                 <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2h-2l-4 4z" />
                 </svg>
                 Ticket Details
               </h3>
