@@ -13,6 +13,7 @@ import StockRoute from "./routes/StockRoute.js";
 import ticketRoute from "./routes/ticketRoute.js";
 import replyTicketRoute from "./routes/replyTicketRoute.js";
 import analysisRouter from "./routes/analysisRoute.js";
+import aiEnhancementRoute from "./routes/aiEnhancementRoute.js";
 
 import cors from "cors";
 import fs from "fs";
@@ -71,6 +72,7 @@ connection.on("error", (err) => {
 // Routes
 app.use("/api/users", userRouter);
 app.use("/api/analysis", analysisRouter);
+app.use("/api/ai", aiEnhancementRoute);
 app.use("/api/products", productRouter);
 app.use("/api/reviews", reviewRouter);
 app.use("/api/inquiries", inquiryRouter);
