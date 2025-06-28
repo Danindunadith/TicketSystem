@@ -18,6 +18,7 @@ export const createTicket = async (req, res) => {
      /*   sentimentScore,
       userId *////old changes i removed and commented out
       sentiment,
+      userId,
       sentimentScore,
       aiPredictedCategory,
       categoryConfidence,
@@ -103,6 +104,7 @@ export const createTicket = async (req, res) => {
       priority,
       attachment,
       statement,
+      userId: userId || null, // Ensure userId is always present
       
       // Comprehensive AI analysis data (same structure as CreateTicket.jsx)
       // Basic sentiment analysis

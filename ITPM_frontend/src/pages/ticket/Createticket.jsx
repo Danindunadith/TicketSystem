@@ -2,8 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import toast from "react-hot-toast";
-import emailjs from '@emailjs/browser';
-import { jwtDecode } from "jwt-decode";
+import {jwtDecode} from "jwt-decode";
 
 // EmailJS Configuration
 const EMAILJS_CONFIG = {
@@ -288,7 +287,7 @@ export default function CreateTicketPage() {
     
     if (department === 'HR') {
       if (text.includes('payroll') || text.includes('salary')) return 'Payroll';
-      if (text.includes('benefits' || text.includes('insurance'))) return 'Benefits';
+      if (text.includes('benefits') || text.includes('insurance')) return 'Benefits';
       if (text.includes('leave') || text.includes('vacation')) return 'Leave Management';
       if (text.includes('training') || text.includes('development')) return 'Training';
       return 'General HR';
@@ -310,22 +309,26 @@ export default function CreateTicketPage() {
 
     // Get token and decode user id
     const token = localStorage.getItem("token");
-    console.log("Token used for ticket creation:", token);
+    console.log("🔑 Token used for ticket creation:", token);
     let userId = null;
     
     if (token) {
       try {
         const decoded = jwtDecode(token);
-        console.log("Decoded token:", decoded);
+        console.log("🔓 Decoded token:", decoded);
         userId = decoded?._id || decoded.userId || decoded.id || decoded.sub || null;
-        console.log("Extracted userId:", userId);
+        console.log("👤 Extracted userId:", userId);
+        console.log("🔍 userId type:", typeof userId);
+        console.log("✅ UserId successfully extracted from token");
       } catch (err) {
-        console.error("Failed to decode token:", err);
+        console.error("❌ Failed to decode token:", err);
       }
+    } else {
+      console.warn("⚠️ No token found in localStorage");
     }
 
     const apiUrl = "/api/tickets/";
-    console.log("Sending POST request to:", apiUrl);
+    console.log("🌐 Sending POST request to:", apiUrl);
 
     try {
       // ALWAYS run AI analysis before ticket submission to ensure fresh data
@@ -361,6 +364,12 @@ export default function CreateTicketPage() {
             };
             setAnalysisResults(currentAnalysisResults);
             console.log("✅ AI analysis completed successfully");
+            console.log("AI analysis results:", {
+              sentiment: currentAnalysisResults.sentiment,
+              category: currentAnalysisResults.predictedCategory?.category,
+              shouldEscalate: currentAnalysisResults.shouldEscalate,
+              hasAutomatedResponse: !!currentAnalysisResults.automatedResponse
+            });
           } else {
             console.warn("AI analysis response missing success field");
           }
@@ -385,15 +394,32 @@ export default function CreateTicketPage() {
       }
       formDataToSend.append("statement", formData.statement);
       
-      // Pass userId to backend
+      // Pass userId to backend with detailed logging
       if (userId) {
         formDataToSend.append("userId", userId);
-        console.log("Appended userId to FormData:", userId);
+        console.log("✅ Successfully appended userId to FormData:", userId);
+        console.log("📦 FormData now contains userId field");
+        console.log("🚀 Ready to send userId to backend:", {
+          userId: userId,
+          userIdType: typeof userId,
+          userIdLength: userId.toString().length
+        });
       } else {
-        console.warn("No userId found in token");
+        console.warn("⚠️ No userId found in token - proceeding without userId");
+        console.warn("🔍 This might cause issues on the backend");
+      }
+
+      // Log all FormData entries for debugging
+      console.log("📋 Complete FormData contents:");
+      for (let [key, value] of formDataToSend.entries()) {
+        if (key === 'userId') {
+          console.log(`  🔑 ${key}: ${value} (THIS IS THE USER ID BEING SENT)`);
+        } else {
+          console.log(`  📝 ${key}: ${typeof value === 'object' ? '[File Object]' : value}`);
+        }
       }
       
-      // Include comprehensive AI analysis data if available
+      // Include comprehensive AI analysis data if available (same as chatbot)
       if (currentAnalysisResults) {
         // Basic sentiment and category
         formDataToSend.append("sentiment", currentAnalysisResults.sentiment);
@@ -442,21 +468,38 @@ export default function CreateTicketPage() {
         
         // Add timestamp for AI analysis
         formDataToSend.append("sentimentAnalyzedAt", new Date().toISOString());
+        
+        // Log comprehensive AI data being sent
+        console.log("Comprehensive AI analysis data being sent:", {
+          sentiment: currentAnalysisResults.sentiment,
+          sentimentScore: currentAnalysisResults.sentimentScore,
+          aiPredictedCategory: currentAnalysisResults.predictedCategory?.category,
+          categoryConfidence: currentAnalysisResults.predictedCategory?.confidence,
+          aiSuggestedPriority: currentAnalysisResults.aiSuggestedPriority,
+          detectedEmotion: currentAnalysisResults.detectedEmotion,
+          emotionIntensity: currentAnalysisResults.emotionIntensity,
+          estimatedResolutionTime: currentAnalysisResults.estimatedResolutionTime,
+          shouldEscalate: currentAnalysisResults.shouldEscalate,
+          hasAutomatedSolution: true,
+          automatedSolutionAttempted: true
+        });
       }
 
+      console.log("🚀 About to send request to backend with userId:", userId);
       const response = await axios.post(apiUrl, formDataToSend, {
         headers: {
           "Content-Type": "multipart/form-data"
         }
       });
 
-      console.log("Ticket creation response:", response.data);
+      console.log("✅ Ticket creation response:", response.data);
+      console.log("🎯 UserId that was sent to backend:", userId);
 
       // Extract ticket ID from response
       const ticket = response.data;
-      const ticketId = ticket.ticketid || ticket._id || ticket.id || 'TK' + Date.now();
+      const ticketId = ticket?.ticketid || ticket._id || ticket.id || 'TK' + Date.now();
       
-      console.log("Extracted Ticket ID:", ticketId);
+      console.log("🎫 Extracted Ticket ID:", ticketId);
 
       toast.success("Ticket created successfully!");
       
@@ -471,8 +514,8 @@ export default function CreateTicketPage() {
           priority: formData.priority,
           date: formData.date,
           statement: formData.statement,
-          aiPredictedCategory: currentAnalysisResults?.predictedCategory?.category || '',
-          automatedResponse: currentAnalysisResults?.automatedResponse || ''
+          aiPredictedCategory: formData.aiPredictedCategory,
+          automatedResponse: formData.automatedResponse
         });
         
         if (emailResult.success) {
@@ -482,13 +525,22 @@ export default function CreateTicketPage() {
         }
       } catch (emailError) {
         console.warn('EmailJS confirmation failed:', emailError);
-        toast.error("Failed to send confirmation email, but ticket was created successfully.");
+        
+        // Check if it's a configuration issue
+        const configTest = testEmailJSConfig();
+        if (!configTest.isConfigured) {
+          console.warn('EmailJS not configured:', configTest.issues);
+          toast.warning("Email confirmation is not configured. Please check the setup guide.");
+        } else {
+          toast.error("Failed to send confirmation email, but ticket was created successfully.");
+        }
       }
       
       navigate("/");
       
     } catch (err) {
-      console.error("Error details:", err.response);
+      console.error("❌ Error details:", err.response);
+      console.error("🔍 UserId that was attempted to be sent:", userId);
       toast.error(err?.response?.data?.message || "An error occurred while creating the ticket");
     } finally {
       setLoading(false);
