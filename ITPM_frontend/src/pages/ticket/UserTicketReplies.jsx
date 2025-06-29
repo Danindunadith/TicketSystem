@@ -6,6 +6,7 @@ export default function UserTicketReplies() {
     const [replies, setReplies] = useState([]);
     const [tickets, setTickets] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [fetchingTickets, setFetchingTickets] = useState(false); // Add this state
 
     // Get logged-in user ID from token
     const getUserId = () => {
@@ -32,21 +33,28 @@ export default function UserTicketReplies() {
         }
 
         setLoading(true);
+        console.log("🔄 Fetching replies for user:", userId);
+        
         axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/reticket/replyticket`)
             .then(res => {
-                console.log("All replies:", res.data);
+                console.log("✅ All replies fetched:", res.data);
                 setReplies(res.data);
             })
             .catch(err => {
-                console.error("Error fetching replies:", err);
+                console.error("❌ Error fetching replies:", err);
                 setReplies([]);
             })
-            .finally(() => setLoading(false));
+            .finally(() => {
+                setLoading(false);
+            });
     }, [userId]);
 
     // 2. For each reply, fetch the ticket and check if userId matches
     useEffect(() => {
         if (replies.length === 0 || !userId) return;
+        
+        setFetchingTickets(true); // Start fetching tickets
+        console.log("🔄 Fetching tickets for", replies.length, "replies");
         
         Promise.all(
             replies.map(reply =>
@@ -54,7 +62,7 @@ export default function UserTicketReplies() {
                     .get(`${import.meta.env.VITE_BACKEND_URL}/api/tickets/${reply.ticketId}`)
                     .then(res => {
                         const ticket = res.data;
-                        console.log("Fetched ticket:", ticket._id);
+                        console.log("✅ Fetched ticket:", ticket._id);
                         console.log(`Ticket ${reply.ticketId} userId: ${ticket.userId || 'not set'}, Current user: ${userId}`);
                         
                         // Only include if ticket's userId matches current user's userId
@@ -71,15 +79,17 @@ export default function UserTicketReplies() {
                         return null; // Filter out non-matching tickets
                     })
                     .catch(err => {
-                        console.error(`Error fetching ticket ${reply.ticketId}:`, err);
+                        console.error(`❌ Error fetching ticket ${reply.ticketId}:`, err);
                         return null;
                     })
             )
         ).then(repliesWithStatements => {
             // Filter out null values (non-matching tickets)
             const filteredTickets = repliesWithStatements.filter(ticket => ticket !== null);
-            console.log("Filtered tickets for user:", filteredTickets);
+            console.log("✅ Filtered tickets for user:", filteredTickets);
             setTickets(filteredTickets);
+        }).finally(() => {
+            setFetchingTickets(false); // Stop fetching tickets
         });
     }, [replies, userId]);
 
@@ -145,14 +155,45 @@ export default function UserTicketReplies() {
         }
     };
 
+    // Loading Spinner Component
+    const LoadingSpinner = ({ size = "8", text = "Loading..." }) => (
+        <div className="flex flex-col items-center justify-center p-8">
+            <div className={`animate-spin rounded-full h-${size} w-${size} border-b-2 border-blue-600 mb-4`}></div>
+            <p className="text-gray-600 text-sm">{text}</p>
+        </div>
+    );
+
+    // Show loading state for initial fetch
     if (loading) {
-        return <div className="p-8 text-center text-gray-500">Loading replies...</div>;
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 md:p-6">
+                <div className="max-w-4xl mx-auto">
+                    <div className="mb-8">
+                        <h1 className="text-3xl font-bold text-gray-800 mb-2">My Ticket Replies</h1>
+                        <p className="text-gray-600">See all replies for your tickets</p>
+                    </div>
+                    <div className="bg-white rounded-xl shadow-lg border border-gray-200">
+                        <LoadingSpinner size="12" text="Loading your ticket replies..." />
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     if (!userId) {
         return (
-            <div className="p-8 text-center text-red-500">
-                <p>Please log in to view your ticket replies.</p>
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 md:p-6">
+                <div className="max-w-4xl mx-auto">
+                    <div className="bg-white rounded-xl shadow-lg border border-red-200 p-8 text-center">
+                        <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+                            <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                            </svg>
+                        </div>
+                        <h3 className="text-lg font-medium text-red-800 mb-2">Authentication Required</h3>
+                        <p className="text-red-600">Please log in to view your ticket replies.</p>
+                    </div>
+                </div>
             </div>
         );
     }
@@ -165,6 +206,13 @@ export default function UserTicketReplies() {
                     <h1 className="text-3xl font-bold text-gray-800 mb-2">My Ticket Replies</h1>
                     <p className="text-gray-600">See all replies for your tickets</p>
                 </div>
+
+                {/* Show loading state while fetching tickets */}
+                {fetchingTickets && (
+                    <div className="bg-white rounded-xl shadow-lg border border-gray-200 mb-6">
+                        <LoadingSpinner text="Fetching your ticket details..." />
+                    </div>
+                )}
 
                 {/* Replies List */}
                 <div className="space-y-6">
@@ -228,9 +276,9 @@ export default function UserTicketReplies() {
                     ))}
                 </div>
 
-                {/* Empty State */}
-                {tickets.length === 0 && (
-                    <div className="text-center py-12">
+                {/* Empty State - Only show when not loading and no tickets */}
+                {!fetchingTickets && tickets.length === 0 && (
+                    <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-12 text-center">
                         <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
                             <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2-2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
