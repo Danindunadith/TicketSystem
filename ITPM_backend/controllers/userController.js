@@ -38,6 +38,7 @@ export function loginUser(req,res){
 
             if(isPasswordCorrect){
                 const token = JsonWebToken.sign({
+                    _id: user._id,
                     firstName : user.firstName,
                     lastName  : user.lastName,
                     email : user.email,

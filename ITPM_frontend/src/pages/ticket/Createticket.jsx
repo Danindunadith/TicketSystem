@@ -2,47 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import toast from "react-hot-toast";
-
-// EmailJS Configuration
-const EMAILJS_CONFIG = {
-  SERVICE_ID: 'service_jrj10f4',
-  TEMPLATE_ID: 'template_l0ctqxs',
-  PUBLIC_KEY: 'KHn7-uw2zB2TcNn3K'
-};
-
-// Email confirmation function
-const sendTicketConfirmationEmail = async (ticketData) => {
-  try {
-    const emailjs = await import('@emailjs/browser');
-
-    const templateParams = {
-      to_email: ticketData.email,
-      to_name: ticketData.name,
-      ticket_id: ticketData.ticketId,
-      subject: ticketData.subject,
-      department: ticketData.department,
-      priority: ticketData.priority,
-      date: ticketData.date,
-      statement: ticketData.statement,
-      ai_category: ticketData.aiPredictedCategory || 'Not specified',
-      automated_response: ticketData.automatedResponse || 'No automated response available',
-      reply_to: 'support@yourcompany.com'
-    };
-
-    const result = await emailjs.default.send(
-      EMAILJS_CONFIG.SERVICE_ID,
-      EMAILJS_CONFIG.TEMPLATE_ID,
-      templateParams,
-      EMAILJS_CONFIG.PUBLIC_KEY
-    );
-
-    console.log('Email sent successfully:', result);
-    return { success: true, result };
-  } catch (error) {
-    console.error('Email sending failed:', error);
-    return { success: false, error: error.message };
-  }
-};
+import emailjs from '@emailjs/browser';
 
 export default function CreateTicketPage() {
   const [formData, setFormData] = useState({
@@ -306,6 +266,24 @@ export default function CreateTicketPage() {
     e.preventDefault();
     setLoading(true);
 
+    // Get token and decode user id
+    const token = localStorage.getItem("token");
+    console.log("Token used for reply submission:", token);
+    const decoded = jwtDecode(token);
+    console.log("Decoded token:", decoded);
+    let userId = null;
+    if (token) {
+      try {
+        const decoded = jwtDecode(token);
+        console.log("Decoded token :", decoded); // Log the whole token
+        // Extract userId from the most likely properties
+        userId = decoded?._id || decoded.userId || decoded.id || decoded.sub || null;
+        console.log("Extracted userId:", userId);
+      } catch (err) {
+        console.error("Failed to decode token:", err);
+      }
+    }
+
     const apiUrl = "http://localhost:3002/api/tickets/";
     console.log("Sending POST request to:", apiUrl);
 
@@ -373,70 +351,10 @@ export default function CreateTicketPage() {
       }
       formDataToSend.append("statement", formData.statement);
       
-      // Include comprehensive AI analysis data if available (same as chatbot)
-      if (currentAnalysisResults) {
-        // Basic sentiment and category
-        formDataToSend.append("sentiment", currentAnalysisResults.sentiment);
-        formDataToSend.append("sentimentScore", currentAnalysisResults.sentimentScore);
-        formDataToSend.append("aiPredictedCategory", currentAnalysisResults.predictedCategory?.category || "");
-        formDataToSend.append("categoryConfidence", currentAnalysisResults.predictedCategory?.confidence || "");
-        
-        // AI-suggested priority and urgency
-        formDataToSend.append("aiSuggestedPriority", currentAnalysisResults.aiSuggestedPriority);
-        formDataToSend.append("urgency", currentAnalysisResults.urgency);
-        
-        // Emotion detection
-        if (currentAnalysisResults.detectedEmotion) {
-          formDataToSend.append("detectedEmotion", currentAnalysisResults.detectedEmotion);
-        }
-        if (currentAnalysisResults.emotionIntensity) {
-          formDataToSend.append("emotionIntensity", currentAnalysisResults.emotionIntensity);
-        }
-        if (currentAnalysisResults.emotions) {
-          formDataToSend.append("emotions", JSON.stringify(currentAnalysisResults.emotions));
-        }
-        
-        // AI-generated content
-        if (currentAnalysisResults.automatedResponse) {
-          formDataToSend.append("automatedResponse", currentAnalysisResults.automatedResponse);
-        }
-        if (currentAnalysisResults.estimatedResolutionTime) {
-          formDataToSend.append("estimatedResolutionTime", currentAnalysisResults.estimatedResolutionTime);
-        }
-        if (currentAnalysisResults.supportAction) {
-          formDataToSend.append("supportAction", currentAnalysisResults.supportAction);
-        }
-        
-        // AI insights and metadata
-        if (currentAnalysisResults.chatbotSuggestions) {
-          formDataToSend.append("chatbotSuggestions", JSON.stringify(currentAnalysisResults.chatbotSuggestions));
-        }
-        formDataToSend.append("shouldEscalate", currentAnalysisResults.shouldEscalate);
-        if (currentAnalysisResults.aiInsights) {
-          formDataToSend.append("aiInsights", JSON.stringify(currentAnalysisResults.aiInsights));
-        }
-        
-        // Automation flags
-        formDataToSend.append("hasAutomatedSolution", "true");
-        formDataToSend.append("automatedSolutionAttempted", "true");
-        
-        // Add timestamp for AI analysis
-        formDataToSend.append("sentimentAnalyzedAt", new Date().toISOString());
-        
-        // Log comprehensive AI data being sent
-        console.log("Comprehensive AI analysis data being sent:", {
-          sentiment: currentAnalysisResults.sentiment,
-          sentimentScore: currentAnalysisResults.sentimentScore,
-          aiPredictedCategory: currentAnalysisResults.predictedCategory?.category,
-          categoryConfidence: currentAnalysisResults.predictedCategory?.confidence,
-          aiSuggestedPriority: currentAnalysisResults.aiSuggestedPriority,
-          detectedEmotion: currentAnalysisResults.detectedEmotion,
-          emotionIntensity: currentAnalysisResults.emotionIntensity,
-          estimatedResolutionTime: currentAnalysisResults.estimatedResolutionTime,
-          shouldEscalate: currentAnalysisResults.shouldEscalate,
-          hasAutomatedSolution: true,
-          automatedSolutionAttempted: true
-        });
+      // Include sentiment data if available
+      if (analysisResults) {
+        formDataToSend.append("sentimentScore", analysisResults.score);
+        formDataToSend.append("suggestedSolution", analysisResults.suggestedSolution || "");
       }
 
       const response = await axios.post(apiUrl, formDataToSend, {

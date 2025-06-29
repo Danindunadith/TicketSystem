@@ -144,6 +144,11 @@ const ticketSchema = new mongoose.Schema({
         type: String,
         default: "Open",
         enum: ["Open", "In Progress", "Resolved", "Closed"],
+    },
+    userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: false
     }
 }, { timestamps: true }); // Add timestamps for creation and update tracking
 

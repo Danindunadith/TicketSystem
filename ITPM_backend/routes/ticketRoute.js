@@ -10,8 +10,7 @@ import {
   getTicketsByEmail,
   getTicketsByDepartment,
   getTicketsByPriority,
-  getTicketCountByDepartment,
-  sendConfirmationEmail
+  getTicketCountByDepartment
 } from "../controllers/ticketController.js";
 
 const router = express.Router();
@@ -50,6 +49,5 @@ router.get("/by-email/:email", getTicketsByEmail);
 router.get("/department/:department", getTicketsByDepartment);
 router.get("/count/department", getTicketCountByDepartment);
 router.get("/priority/:priority", getTicketsByPriority);
-router.post("/send-confirmation", sendConfirmationEmail);
 
 export default router;
