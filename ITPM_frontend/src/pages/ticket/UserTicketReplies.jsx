@@ -6,7 +6,7 @@ export default function UserTicketReplies() {
     const [replies, setReplies] = useState([]);
     const [tickets, setTickets] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [fetchingTickets, setFetchingTickets] = useState(false); // New state for ticket fetching
+    const [fetchingTickets, setFetchingTickets] = useState(false);
 
     // Get logged-in user ID from token
     const getUserId = () => {
@@ -33,13 +33,15 @@ export default function UserTicketReplies() {
         }
 
         setLoading(true);
+        console.log("🔄 Fetching replies for user:", userId);
+        
         axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/reticket/replyticket`)
             .then(res => {
-                console.log("All replies:", res.data);
+                console.log("✅ All replies fetched:", res.data);
                 setReplies(res.data);
             })
             .catch(err => {
-                console.error("Error fetching replies:", err);
+                console.error("❌ Error fetching replies:", err);
                 setReplies([]);
             })
             .finally(() => setLoading(false));
@@ -49,7 +51,8 @@ export default function UserTicketReplies() {
     useEffect(() => {
         if (replies.length === 0 || !userId) return;
         
-        setFetchingTickets(true); // Start loading tickets
+        setFetchingTickets(true);
+        console.log("🔄 Fetching tickets for", replies.length, "replies");
         
         Promise.all(
             replies.map(reply =>
@@ -57,7 +60,7 @@ export default function UserTicketReplies() {
                     .get(`${import.meta.env.VITE_BACKEND_URL}/api/tickets/${reply.ticketId}`)
                     .then(res => {
                         const ticket = res.data;
-                        console.log("Fetched ticket:", ticket._id);
+                        console.log("✅ Fetched ticket:", ticket._id);
                         console.log(`Ticket ${reply.ticketId} userId: ${ticket.userId || 'not set'}, Current user: ${userId}`);
                         
                         // Only include if ticket's userId matches current user's userId
@@ -71,20 +74,28 @@ export default function UserTicketReplies() {
                                 ticketUserId: ticket.userId
                             };
                         }
-                        return null; // Filter out non-matching tickets
+                        return null;
                     })
                     .catch(err => {
-                        console.error(`Error fetching ticket ${reply.ticketId}:`, err);
+                        console.error(`❌ Error fetching ticket ${reply.ticketId}:`, err);
                         return null;
                     })
             )
         ).then(repliesWithStatements => {
             // Filter out null values (non-matching tickets)
             const filteredTickets = repliesWithStatements.filter(ticket => ticket !== null);
-            console.log("Filtered tickets for user:", filteredTickets);
-            setTickets(filteredTickets);
+            
+            // Sort by reply creation date - newest first
+            const sortedTickets = filteredTickets.sort((a, b) => {
+                const dateA = new Date(a.createdAt);
+                const dateB = new Date(b.createdAt);
+                return dateB - dateA; // Newest first (descending order)
+            });
+            
+            console.log("✅ Filtered and sorted tickets for user:", sortedTickets);
+            setTickets(sortedTickets);
         }).finally(() => {
-            setFetchingTickets(false); // Stop loading tickets
+            setFetchingTickets(false);
         });
     }, [replies, userId]);
 
@@ -99,6 +110,27 @@ export default function UserTicketReplies() {
             hour: '2-digit',
             minute: '2-digit'
         });
+    };
+
+    // Helper function to get relative time (e.g., "2 hours ago")
+    const getRelativeTime = (dateString) => {
+        if (!dateString) return "";
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffInMs = now - date;
+        const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+        const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+        const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+
+        if (diffInMinutes < 60) {
+            return `${diffInMinutes} minutes ago`;
+        } else if (diffInHours < 24) {
+            return `${diffInHours} hours ago`;
+        } else if (diffInDays < 7) {
+            return `${diffInDays} days ago`;
+        } else {
+            return formatDate(dateString);
+        }
     };
 
     // Helper function to get status color
@@ -194,14 +226,40 @@ export default function UserTicketReplies() {
             <div className="max-w-4xl mx-auto">
                 {/* Header Section */}
                 <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-gray-800 mb-2">My Ticket Replies</h1>
-                    <p className="text-gray-600">See all replies for your tickets</p>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-3xl font-bold text-gray-800 mb-2">My Ticket Replies</h1>
+                            <p className="text-gray-600">See all replies for your tickets • Newest first</p>
+                        </div>
+                        {tickets.length > 0 && (
+                            <div className="bg-white px-4 py-2 rounded-lg shadow-sm border">
+                                <p className="text-sm text-gray-600">
+                                    <span className="font-semibold text-gray-800">{tickets.length}</span> 
+                                    {tickets.length === 1 ? ' reply' : ' replies'}
+                                </p>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Replies List */}
                 <div className="space-y-6">
-                    {tickets.map((reply) => (
+                    {tickets.map((reply, index) => (
                         <div key={reply._id} className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+                            {/* New Badge for recent replies */}
+                            {index < 3 && (
+                                <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-4 py-1">
+                                    <div className="flex items-center justify-center">
+                                        <svg className="w-4 h-4 text-white mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                        </svg>
+                                        <span className="text-white text-sm font-medium">
+                                            {index === 0 ? 'Latest Reply' : 'Recent'}
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
+                            
                             {/* Ticket Header */}
                             <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
                                 <div className="flex items-center justify-between">
@@ -209,9 +267,15 @@ export default function UserTicketReplies() {
                                         <h3 className="text-lg font-semibold">{reply.ticketSubject}</h3>
                                         <p className="text-blue-100 text-sm">Ticket #{reply.ticketId}</p>
                                     </div>
-                                    <div className={`flex items-center px-3 py-1 rounded-full border ${getStatusColor(reply.ticketStatus)}`}>
-                                        {getStatusIcon(reply.ticketStatus)}
-                                        <span className="ml-2 text-xs font-semibold capitalize">{reply.ticketStatus}</span>
+                                    <div className="flex items-center space-x-3">
+                                        <div className="text-right text-blue-100">
+                                            <p className="text-xs">Replied</p>
+                                            <p className="text-sm font-medium">{getRelativeTime(reply.createdAt)}</p>
+                                        </div>
+                                        <div className={`flex items-center px-3 py-1 rounded-full border ${getStatusColor(reply.ticketStatus)}`}>
+                                            {getStatusIcon(reply.ticketStatus)}
+                                            <span className="ml-2 text-xs font-semibold capitalize">{reply.ticketStatus}</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -247,7 +311,7 @@ export default function UserTicketReplies() {
                                         <div>
                                             <p className="font-semibold text-gray-800">Support Team Reply</p>
                                             <p className="text-xs text-gray-500">
-                                                By: {reply.firstName} • {formatDate(reply.createdAt)}
+                                                By: {reply.firstName} • {getRelativeTime(reply.createdAt)}
                                             </p>
                                         </div>
                                     </div>

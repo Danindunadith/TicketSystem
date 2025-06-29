@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import toast from "react-hot-toast";
 import {jwtDecode} from "jwt-decode";
+import '@emailjs/browser';
+
 
 // EmailJS Configuration
 const EMAILJS_CONFIG = {
@@ -62,8 +64,8 @@ export default function CreateTicketPage() {
   const [loading, setLoading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResults, setAnalysisResults] = useState(null);
-  const navigate = useNavigate(); 
-  
+  const navigate = useNavigate();
+
 
   const handleChange = (e) => {
     const { name, value, files } = e.target;
@@ -71,16 +73,16 @@ export default function CreateTicketPage() {
       ...formData,
       [name]: files ? files[0] : value
     };
-    
+
     // Auto-detect department and related service when subject or statement changes
     if (name === 'subject' || name === 'statement') {
       const subject = name === 'subject' ? value : formData.subject;
       const statement = name === 'statement' ? value : formData.statement;
-      
+
       if (subject && statement) {
         const detectedDepartment = detectDepartment(subject, statement);
         const detectedService = detectRelatedService(subject, statement, detectedDepartment);
-        
+
         updatedFormData = {
           ...updatedFormData,
           department: detectedDepartment,
@@ -88,9 +90,9 @@ export default function CreateTicketPage() {
         };
       }
     }
-    
+
     setFormData(updatedFormData);
-    
+
     // Reset sentiment analysis when important fields change
     if (["statement", "subject", "department", "relatedservice"].includes(name)) {
       setAnalysisResults(null);
@@ -109,67 +111,67 @@ export default function CreateTicketPage() {
 
     try {
       const fullMessage = `${formData.subject}. ${formData.statement}`;
-      
+
       // Run comprehensive AI analysis using the new endpoint
       const analysisResponse = await axios.post(`http://localhost:3002/api/ai/analyze-ticket`, {
         title: formData.subject,
         description: formData.statement,
         priority: formData.priority
       });
-      
+
       if (analysisResponse.data.success) {
         const aiResults = analysisResponse.data;
-        
+
         // Set the comprehensive results directly from the new endpoint
         const comprehensiveResults = {
           // Basic sentiment analysis
           sentiment: aiResults.sentiment,
           sentimentScore: aiResults.sentimentScore,
-          
+
           // Category prediction
           predictedCategory: {
             category: aiResults.predictedCategory,
             confidence: aiResults.categoryConfidence
           },
-          
+
           // Priority and urgency
           aiSuggestedPriority: aiResults.aiSuggestedPriority,
           urgency: aiResults.urgency,
-          
+
           // Emotion analysis
           detectedEmotion: aiResults.detectedEmotion,
           emotionIntensity: aiResults.emotionIntensity,
           emotions: aiResults.emotions,
-          
+
           // AI-generated content
           automatedResponse: aiResults.automatedResponse,
           estimatedResolutionTime: aiResults.estimatedResolutionTime,
           supportAction: aiResults.supportAction,
-          
+
           // Additional insights
           chatbotSuggestions: aiResults.chatbotSuggestions,
           shouldEscalate: aiResults.shouldEscalate,
-          
+
           // AI insights
           aiInsights: aiResults.aiInsights
         };
-        
+
         setAnalysisResults(comprehensiveResults);
-        
+
         // Update the priority based on AI analysis
         setFormData(prev => ({
           ...prev,
           priority: comprehensiveResults.aiSuggestedPriority
         }));
-        
+
         toast.success("Comprehensive AI analysis completed successfully");
       } else {
         throw new Error('AI analysis failed');
       }
-      
+
     } catch (error) {
       console.error("AI analysis error:", error);
-      
+
       // Fallback to original analysis endpoints
       try {
         const [sentimentResponse, categoryResponse] = await Promise.all([
@@ -185,7 +187,7 @@ export default function CreateTicketPage() {
             department: formData.department
           })
         ]);
-        
+
         // Combine fallback results
         const fallbackResults = {
           sentiment: sentimentResponse.data.sentiment || 'NEUTRAL',
@@ -202,14 +204,14 @@ export default function CreateTicketPage() {
             analysisTimestamp: new Date().toISOString()
           }
         };
-        
+
         setAnalysisResults(fallbackResults);
-        
+
         setFormData(prev => ({
           ...prev,
           priority: fallbackResults.aiSuggestedPriority
         }));
-        
+
         toast.success("Fallback AI analysis completed");
       } catch (fallbackError) {
         console.error("Fallback analysis error:", fallbackError);
@@ -233,39 +235,39 @@ export default function CreateTicketPage() {
   // Smart department detection based on subject and statement
   const detectDepartment = (subject, statement) => {
     const text = `${subject} ${statement}`.toLowerCase();
-    
+
     // IT Support keywords
-    if (text.includes('login') || text.includes('password') || text.includes('access') || 
-        text.includes('network') || text.includes('email') || text.includes('software') ||
-        text.includes('hardware') || text.includes('computer') || text.includes('system') ||
-        text.includes('server') || text.includes('internet') || text.includes('wifi') ||
-        text.includes('vpn') || text.includes('security') || text.includes('virus') ||
-        text.includes('malware') || text.includes('backup') || text.includes('data') ||
-        text.includes('database') || text.includes('application') || text.includes('website') ||
-        text.includes('browser') || text.includes('error') || text.includes('bug') ||
-        text.includes('installation') || text.includes('configuration') || text.includes('update')) {
+    if (text.includes('login') || text.includes('password') || text.includes('access') ||
+      text.includes('network') || text.includes('email') || text.includes('software') ||
+      text.includes('hardware') || text.includes('computer') || text.includes('system') ||
+      text.includes('server') || text.includes('internet') || text.includes('wifi') ||
+      text.includes('vpn') || text.includes('security') || text.includes('virus') ||
+      text.includes('malware') || text.includes('backup') || text.includes('data') ||
+      text.includes('database') || text.includes('application') || text.includes('website') ||
+      text.includes('browser') || text.includes('error') || text.includes('bug') ||
+      text.includes('installation') || text.includes('configuration') || text.includes('update')) {
       return 'IT';
     }
-    
+
     // HR keywords
     if (text.includes('payroll') || text.includes('salary') || text.includes('benefits') ||
-        text.includes('leave') || text.includes('vacation') || text.includes('sick') ||
-        text.includes('employee') || text.includes('staff') || text.includes('hiring') ||
-        text.includes('recruitment') || text.includes('training') || text.includes('performance') ||
-        text.includes('policy') || text.includes('handbook') || text.includes('compliance') ||
-        text.includes('onboarding') || text.includes('termination') || text.includes('discipline')) {
+      text.includes('leave') || text.includes('vacation') || text.includes('sick') ||
+      text.includes('employee') || text.includes('staff') || text.includes('hiring') ||
+      text.includes('recruitment') || text.includes('training') || text.includes('performance') ||
+      text.includes('policy') || text.includes('handbook') || text.includes('compliance') ||
+      text.includes('onboarding') || text.includes('termination') || text.includes('discipline')) {
       return 'HR';
     }
-    
+
     // Finance keywords
     if (text.includes('invoice') || text.includes('payment') || text.includes('billing') ||
-        text.includes('expense') || text.includes('budget') || text.includes('accounting') ||
-        text.includes('tax') || text.includes('financial') || text.includes('cost') ||
-        text.includes('refund') || text.includes('charge') || text.includes('fee') ||
-        text.includes('bank') || text.includes('credit') || text.includes('debit')) {
+      text.includes('expense') || text.includes('budget') || text.includes('accounting') ||
+      text.includes('tax') || text.includes('financial') || text.includes('cost') ||
+      text.includes('refund') || text.includes('charge') || text.includes('fee') ||
+      text.includes('bank') || text.includes('credit') || text.includes('debit')) {
       return 'Finance';
     }
-    
+
     // Default to Support for general inquiries
     return 'Support';
   };
@@ -273,7 +275,7 @@ export default function CreateTicketPage() {
   // Smart related service detection
   const detectRelatedService = (subject, statement, department) => {
     const text = `${subject} ${statement}`.toLowerCase();
-    
+
     if (department === 'IT') {
       if (text.includes('email') || text.includes('outlook') || text.includes('gmail')) return 'Email';
       if (text.includes('password') || text.includes('login') || text.includes('access')) return 'Authentication';
@@ -284,7 +286,7 @@ export default function CreateTicketPage() {
       if (text.includes('phone') || text.includes('mobile') || text.includes('telephone')) return 'Phone';
       return 'General IT';
     }
-    
+
     if (department === 'HR') {
       if (text.includes('payroll') || text.includes('salary')) return 'Payroll';
       if (text.includes('benefits') || text.includes('insurance')) return 'Benefits';
@@ -292,14 +294,14 @@ export default function CreateTicketPage() {
       if (text.includes('training') || text.includes('development')) return 'Training';
       return 'General HR';
     }
-    
+
     if (department === 'Finance') {
       if (text.includes('invoice') || text.includes('billing')) return 'Billing';
       if (text.includes('expense') || text.includes('reimbursement')) return 'Expenses';
       if (text.includes('payment') || text.includes('payroll')) return 'Payments';
       return 'General Finance';
     }
-    
+
     return 'General Support';
   };
 
@@ -311,7 +313,7 @@ export default function CreateTicketPage() {
     const token = localStorage.getItem("token");
     console.log("🔑 Token used for ticket creation:", token);
     let userId = null;
-    
+
     if (token) {
       try {
         const decoded = jwtDecode(token);
@@ -319,7 +321,6 @@ export default function CreateTicketPage() {
         userId = decoded?._id || decoded.userId || decoded.id || decoded.sub || null;
         console.log("👤 Extracted userId:", userId);
         console.log("🔍 userId type:", typeof userId);
-        console.log("✅ UserId successfully extracted from token");
       } catch (err) {
         console.error("❌ Failed to decode token:", err);
       }
@@ -327,8 +328,8 @@ export default function CreateTicketPage() {
       console.warn("⚠️ No token found in localStorage");
     }
 
-    const apiUrl = "/api/tickets/";
-    console.log("🌐 Sending POST request to:", apiUrl);
+    const apiUrl = "http://localhost:3002/api/tickets/";
+    console.log("Sending POST request to:", apiUrl);
 
     try {
       // ALWAYS run AI analysis before ticket submission to ensure fresh data
@@ -341,7 +342,7 @@ export default function CreateTicketPage() {
             description: formData.statement,
             priority: formData.priority
           });
-          
+
           if (analysisResponse.data && analysisResponse.data.success) {
             currentAnalysisResults = {
               sentiment: analysisResponse.data.sentiment,
@@ -393,12 +394,9 @@ export default function CreateTicketPage() {
         formDataToSend.append("attachment", formData.attachment);
       }
       formDataToSend.append("statement", formData.statement);
-      
-      // Pass userId to backend with detailed logging
       if (userId) {
         formDataToSend.append("userId", userId);
         console.log("✅ Successfully appended userId to FormData:", userId);
-        console.log("📦 FormData now contains userId field");
         console.log("🚀 Ready to send userId to backend:", {
           userId: userId,
           userIdType: typeof userId,
@@ -406,19 +404,8 @@ export default function CreateTicketPage() {
         });
       } else {
         console.warn("⚠️ No userId found in token - proceeding without userId");
-        console.warn("🔍 This might cause issues on the backend");
       }
 
-      // Log all FormData entries for debugging
-      console.log("📋 Complete FormData contents:");
-      for (let [key, value] of formDataToSend.entries()) {
-        if (key === 'userId') {
-          console.log(`  🔑 ${key}: ${value} (THIS IS THE USER ID BEING SENT)`);
-        } else {
-          console.log(`  📝 ${key}: ${typeof value === 'object' ? '[File Object]' : value}`);
-        }
-      }
-      
       // Include comprehensive AI analysis data if available (same as chatbot)
       if (currentAnalysisResults) {
         // Basic sentiment and category
@@ -426,11 +413,11 @@ export default function CreateTicketPage() {
         formDataToSend.append("sentimentScore", currentAnalysisResults.sentimentScore);
         formDataToSend.append("aiPredictedCategory", currentAnalysisResults.predictedCategory?.category || "");
         formDataToSend.append("categoryConfidence", currentAnalysisResults.predictedCategory?.confidence || "");
-        
+
         // AI-suggested priority and urgency
         formDataToSend.append("aiSuggestedPriority", currentAnalysisResults.aiSuggestedPriority);
         formDataToSend.append("urgency", currentAnalysisResults.urgency);
-        
+
         // Emotion detection
         if (currentAnalysisResults.detectedEmotion) {
           formDataToSend.append("detectedEmotion", currentAnalysisResults.detectedEmotion);
@@ -441,7 +428,7 @@ export default function CreateTicketPage() {
         if (currentAnalysisResults.emotions) {
           formDataToSend.append("emotions", JSON.stringify(currentAnalysisResults.emotions));
         }
-        
+
         // AI-generated content
         if (currentAnalysisResults.automatedResponse) {
           formDataToSend.append("automatedResponse", currentAnalysisResults.automatedResponse);
@@ -452,7 +439,7 @@ export default function CreateTicketPage() {
         if (currentAnalysisResults.supportAction) {
           formDataToSend.append("supportAction", currentAnalysisResults.supportAction);
         }
-        
+
         // AI insights and metadata
         if (currentAnalysisResults.chatbotSuggestions) {
           formDataToSend.append("chatbotSuggestions", JSON.stringify(currentAnalysisResults.chatbotSuggestions));
@@ -461,14 +448,14 @@ export default function CreateTicketPage() {
         if (currentAnalysisResults.aiInsights) {
           formDataToSend.append("aiInsights", JSON.stringify(currentAnalysisResults.aiInsights));
         }
-        
+
         // Automation flags
         formDataToSend.append("hasAutomatedSolution", "true");
         formDataToSend.append("automatedSolutionAttempted", "true");
-        
+
         // Add timestamp for AI analysis
         formDataToSend.append("sentimentAnalyzedAt", new Date().toISOString());
-        
+
         // Log comprehensive AI data being sent
         console.log("Comprehensive AI analysis data being sent:", {
           sentiment: currentAnalysisResults.sentiment,
@@ -485,24 +472,22 @@ export default function CreateTicketPage() {
         });
       }
 
-      console.log("🚀 About to send request to backend with userId:", userId);
       const response = await axios.post(apiUrl, formDataToSend, {
         headers: {
           "Content-Type": "multipart/form-data"
         }
       });
 
-      console.log("✅ Ticket creation response:", response.data);
-      console.log("🎯 UserId that was sent to backend:", userId);
+      console.log("Ticket creation response:", response.data);
 
       // Extract ticket ID from response
       const ticket = response.data;
-      const ticketId = ticket?.ticketid || ticket._id || ticket.id || 'TK' + Date.now();
-      
-      console.log("🎫 Extracted Ticket ID:", ticketId);
+      const ticketId = ticket.ticketid || ticket._id || ticket.id || 'TK' + Date.now();
+
+      console.log("Extracted Ticket ID:", ticketId);
 
       toast.success("Ticket created successfully!");
-      
+
       // Send confirmation email using EmailJS
       try {
         const emailResult = await sendTicketConfirmationEmail({
@@ -517,7 +502,7 @@ export default function CreateTicketPage() {
           aiPredictedCategory: formData.aiPredictedCategory,
           automatedResponse: formData.automatedResponse
         });
-        
+
         if (emailResult.success) {
           toast.success("Confirmation email sent successfully!");
         } else {
@@ -525,7 +510,7 @@ export default function CreateTicketPage() {
         }
       } catch (emailError) {
         console.warn('EmailJS confirmation failed:', emailError);
-        
+
         // Check if it's a configuration issue
         const configTest = testEmailJSConfig();
         if (!configTest.isConfigured) {
@@ -535,12 +520,11 @@ export default function CreateTicketPage() {
           toast.error("Failed to send confirmation email, but ticket was created successfully.");
         }
       }
-      
+
       navigate("/");
-      
+
     } catch (err) {
-      console.error("❌ Error details:", err.response);
-      console.error("🔍 UserId that was attempted to be sent:", userId);
+      console.error("Error details:", err.response);
       toast.error(err?.response?.data?.message || "An error occurred while creating the ticket");
     } finally {
       setLoading(false);
@@ -664,7 +648,7 @@ export default function CreateTicketPage() {
             <div className="mb-8">
               <h3 className="text-md font-medium text-gray-900 mb-4 flex items-center">
                 <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2h-2l-4 4z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
                 Ticket Details
               </h3>
@@ -692,12 +676,11 @@ export default function CreateTicketPage() {
                   {formData.priority ? (
                     <div className={`px-3 py-2 rounded-md border ${getPriorityColor(formData.priority)}`}>
                       <div className="flex items-center">
-                        <span className={`w-3 h-3 rounded-full mr-2 ${
-                          formData.priority === 'Low' ? 'bg-green-500' : 
-                          formData.priority === 'Medium' ? 'bg-yellow-500' : 
-                          formData.priority === 'High' ? 'bg-orange-500' : 
-                          'bg-red-500'
-                        }`}></span>
+                        <span className={`w-3 h-3 rounded-full mr-2 ${formData.priority === 'Low' ? 'bg-green-500' :
+                          formData.priority === 'Medium' ? 'bg-yellow-500' :
+                            formData.priority === 'High' ? 'bg-orange-500' :
+                              'bg-red-500'
+                          }`}></span>
                         <span>{formData.priority}</span>
                         {analysisResults && <span className="text-xs text-gray-500 ml-auto">AI determined</span>}
                       </div>
@@ -710,7 +693,7 @@ export default function CreateTicketPage() {
                   <input type="hidden" name="priority" value={formData.priority} />
                 </div>
               </div>
-              
+
               <div className="mb-6">
                 <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-2">
                   Subject <span className="text-red-500">*</span>
@@ -827,7 +810,7 @@ export default function CreateTicketPage() {
                   </div>
                 )}
               </div>
-              
+
               {/* AI Analysis Button - Added below attachment section */}
               <div className="mt-6 pt-6 border-t border-gray-200">
                 <h3 className="text-md font-medium text-gray-900 mb-4 flex items-center">
@@ -854,7 +837,7 @@ export default function CreateTicketPage() {
                     "Generate AI Analysis"
                   )}
                 </button>
-                
+
                 {/* Comprehensive AI Analysis Results - Matching Chatbot Features */}
                 {analysisResults && (
                   <div className="mt-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200">
@@ -885,17 +868,16 @@ export default function CreateTicketPage() {
                           <span className="font-semibold text-green-800">Sentiment Score</span>
                         </div>
                         <p className="text-green-700 font-medium">
-                          {analysisResults.sentiment || 
-                           (analysisResults.sentimentScore > 0.7 ? 'POSITIVE' : 
-                            analysisResults.sentimentScore < 0.4 ? 'NEGATIVE' : 'NEUTRAL')}
+                          {analysisResults.sentiment ||
+                            (analysisResults.sentimentScore > 0.7 ? 'POSITIVE' :
+                              analysisResults.sentimentScore < 0.4 ? 'NEGATIVE' : 'NEUTRAL')}
                         </p>
                         <div className="mt-2">
                           <div className="w-full bg-green-200 rounded-full h-2">
-                            <div 
-                              className={`h-2 rounded-full transition-all duration-300 ${
-                                (analysisResults.sentimentScore || analysisResults.score) > 0.7 ? 'bg-green-600' : 
+                            <div
+                              className={`h-2 rounded-full transition-all duration-300 ${(analysisResults.sentimentScore || analysisResults.score) > 0.7 ? 'bg-green-600' :
                                 (analysisResults.sentimentScore || analysisResults.score) < 0.4 ? 'bg-red-500' : 'bg-yellow-500'
-                              }`}
+                                }`}
                               style={{ width: `${(analysisResults.sentimentScore || analysisResults.score || 0.5) * 100}%` }}
                             ></div>
                           </div>
@@ -922,8 +904,8 @@ export default function CreateTicketPage() {
                                 <span>{Math.round(analysisResults.predictedCategory.confidence * 100)}%</span>
                               </div>
                               <div className="w-full bg-blue-200 rounded-full h-2">
-                                <div 
-                                  className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                                <div
+                                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                                   style={{ width: `${analysisResults.predictedCategory.confidence * 100}%` }}
                                 ></div>
                               </div>
@@ -941,13 +923,12 @@ export default function CreateTicketPage() {
                             </svg>
                             <span className="font-semibold text-orange-800">AI Priority</span>
                           </div>
-                          <span 
-                            className={`px-2 py-1 rounded-full text-xs font-bold ${
-                              analysisResults.aiSuggestedPriority === 'Critical' ? 'bg-red-100 text-red-800' :
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-bold ${analysisResults.aiSuggestedPriority === 'Critical' ? 'bg-red-100 text-red-800' :
                               analysisResults.aiSuggestedPriority === 'High' ? 'bg-orange-100 text-orange-800' :
-                              analysisResults.aiSuggestedPriority === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-green-100 text-green-800'
-                            }`}
+                                analysisResults.aiSuggestedPriority === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+                                  'bg-green-100 text-green-800'
+                              }`}
                           >
                             {analysisResults.aiSuggestedPriority}
                           </span>
@@ -966,11 +947,11 @@ export default function CreateTicketPage() {
                           </div>
                           <div className="flex items-center">
                             <span className="text-2xl mr-2">
-                              {analysisResults.detectedEmotion === 'joy' ? '😊' : 
-                               analysisResults.detectedEmotion === 'anger' ? '😠' : 
-                               analysisResults.detectedEmotion === 'sadness' ? '😢' : 
-                               analysisResults.detectedEmotion === 'fear' ? '😰' : 
-                               analysisResults.detectedEmotion === 'surprise' ? '😲' : '😐'}
+                              {analysisResults.detectedEmotion === 'joy' ? '😊' :
+                                analysisResults.detectedEmotion === 'anger' ? '😠' :
+                                  analysisResults.detectedEmotion === 'sadness' ? '😢' :
+                                    analysisResults.detectedEmotion === 'fear' ? '😰' :
+                                      analysisResults.detectedEmotion === 'surprise' ? '😲' : '😐'}
                             </span>
                             <span className="text-purple-700 font-medium capitalize">{analysisResults.detectedEmotion}</span>
                           </div>
@@ -981,8 +962,8 @@ export default function CreateTicketPage() {
                                 <span>{(analysisResults.emotionIntensity * 100).toFixed(0)}%</span>
                               </div>
                               <div className="w-full bg-purple-200 rounded-full h-2">
-                                <div 
-                                  className="bg-purple-600 h-2 rounded-full transition-all duration-300" 
+                                <div
+                                  className="bg-purple-600 h-2 rounded-full transition-all duration-300"
                                   style={{ width: `${analysisResults.emotionIntensity * 100}%` }}
                                 ></div>
                               </div>
