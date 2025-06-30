@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import "./addEmployee.css";
-import axios from "axios";
+import axiosInstance from '../../config/axiosConfig';
 import toast from 'react-hot-toast';
 
 
@@ -29,7 +29,7 @@ const AddEmployee = () => {
 
     const submitForm = async(e) =>{
        e.preventDefault();
-       await axios.post("http://localhost:3002/api/employee/createemp",employee)
+       await axiosInstance.post("/employee/createemp",employee)
        .then((response)=>{
         toast.success(response.data.msg, {position:"top-right"} )
         /*Swal.fire({

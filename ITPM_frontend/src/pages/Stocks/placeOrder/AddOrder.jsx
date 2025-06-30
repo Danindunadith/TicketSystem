@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./addOrder.css";
-import axios from "axios";
+import axiosInstance from '../../../config/axiosConfig';
 
 const AddOrder = () => {
   const [order, setOrder] = useState({
@@ -67,7 +67,7 @@ const AddOrder = () => {
         },
       };
       try {
-        const response = await axios.post(url, payload, config);
+        const response = await axiosInstance.post(url, payload, config);
         console.log(response);
         navigate("/stocks");
       } catch (error) {

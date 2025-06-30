@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom"; // <-- import useParams
 import { toast } from "react-hot-toast";
-import axios from "axios";
 import emailjs from '@emailjs/browser';
 import { jwtDecode } from "jwt-decode";
+import axiosInstance from '../../config/axiosConfig';
 
 export default function ReplyTicket() {
     const navigate = useNavigate();
@@ -83,8 +83,8 @@ export default function ReplyTicket() {
             // Example: get firstName if present
             // const firstName = decoded.firstName;
 
-            await axios.post(
-                `${import.meta.env.VITE_BACKEND_URL}/api/reticket/replyticket`,
+            await axiosInstance.post(
+                `/api/reticket/replyticket`,
                 {
                     ...formData,
                     firstName: decoded.firstName,

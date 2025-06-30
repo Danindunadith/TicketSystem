@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
+import axiosInstance from '../../config/axiosConfig';
 import toast from "react-hot-toast";
 import { FaFilePdf, FaImage, FaRobot, FaBrain, FaChartBar, FaClock, FaEye, FaHeart, FaExclamationTriangle } from "react-icons/fa";
 import { Brain, Zap, Target, TrendingUp, AlertCircle, Bot, Sparkles } from 'lucide-react';
@@ -14,7 +14,7 @@ export default function OneTicketPage() {
   useEffect(() => {
     const fetchTicket = async () => {
       try {
-        const response = await axios.get(`/api/tickets/${id}`);
+        const response = await axiosInstance.get(`/api/tickets/${id}`);
         setTicket(response.data);
         setLoading(false);
       } catch (err) {
@@ -144,7 +144,9 @@ export default function OneTicketPage() {
                   </p>
                   <p className="text-sm text-gray-600 mb-2">
                     <span className="font-medium">Date:</span>{" "}
-                    {new Date(ticket.date).toLocaleDateString()}
+                    {ticket.date && !isNaN(new Date(ticket.date)) && new Date(ticket.date).toString() !== 'Invalid Date'
+                      ? new Date(ticket.date).toLocaleDateString()
+                      : 'N/A'}
                   </p>
                   <p className="text-sm text-gray-600 mb-2">
                     <span className="font-medium">Department:</span> {ticket.department}

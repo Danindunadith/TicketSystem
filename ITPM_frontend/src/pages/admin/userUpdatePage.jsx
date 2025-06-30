@@ -1,4 +1,4 @@
-import axios from "axios";
+import axiosInstance from '../../config/axiosConfig';
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -24,8 +24,8 @@ export default function UserUpdatePage() {
     }
 
     try {
-      const result = await axios.put(
-        `${import.meta.env.VITE_BACKEND_URL}/api/users/${userEmail}`,
+      const result = await axiosInstance.put(
+        `/api/users/${userEmail}`,
         {
           role: userRole,
           firstName: userFirstName,

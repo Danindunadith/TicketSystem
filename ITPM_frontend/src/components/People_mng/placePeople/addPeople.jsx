@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from "axios";
+import axiosInstance from '../../../config/axiosConfig';
 import toast from 'react-hot-toast';
 import { User, Mail, Phone, MapPin, ArrowLeft, UserPlus } from 'lucide-react';
 
@@ -36,7 +36,7 @@ const AddPeople = () => {
         if (Object.keys(validationErrors).length > 0) {
             setErrors(validationErrors);
         } else {
-            await axios.post("http://localhost:3002/api/peoples/createpeo", people)
+            await axiosInstance.post("peoples/createpeo", people)
                 .then((response) => {
                     toast.success(response.data.msg, { position: "top-right" });
                     navigate("/");

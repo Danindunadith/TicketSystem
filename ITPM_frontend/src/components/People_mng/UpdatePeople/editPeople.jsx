@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { useState } from "react";
-import axios from "axios";
+import axiosInstance from '../../../config/axiosConfig';
 import toast from "react-hot-toast";
 
 const EditPeople = () => {
@@ -25,7 +25,7 @@ const EditPeople = () => {
     }
 
     useEffect(()=>{
-        axios.get(`http://localhost:3002/api/peoples/getonepeople/${id}`)
+        axiosInstance.get(`/peoples/getonepeople/${id}`)
         .then((response)=>{
             setPeople(response.data);
         })
@@ -36,7 +36,7 @@ const EditPeople = () => {
 
     const submitForm = async(e)=>{
         e.preventDefault();
-       await axios.put(`http://localhost:3002/api/peoples/updatepeople/${id}`,people)
+       await axiosInstance.put(`/peoples/updatepeople/${id}`,people)
        .then((response)=>{
         toast.success(response.data.msg, {position:"top-right"} )
         navigate("/admin/people")

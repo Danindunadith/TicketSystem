@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import axios from "axios";
+import axiosInstance from '../../../config/axiosConfig';
+import jsPDF from "jspdf";
 
 
 import "./order.css";
@@ -13,7 +14,7 @@ const Order = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get("http://localhost:3002/api/stock/getall");
+        const response = await axiosInstance.get("/stock/getall");
         setOrders(response.data);
         setFilteredOrders(response.data);
       } catch (error) {
@@ -25,7 +26,7 @@ const Order = () => {
   }, []);
 
   const deleteOrder = async (orderId) => {
-    const url = "http://localhost:3002/api/stock/delete";
+    const url = "/stock/delete";
     const config = {
       headers: {
         "x-apikey": "API_KEY",
@@ -33,7 +34,7 @@ const Order = () => {
     };
 
     try {
-      await axios.post(url, { id: orderId }, config);
+      await axiosInstance.post(url, { id: orderId }, config);
       setOrders(prevOrders => prevOrders.filter(order => order._id !== orderId));
       Swal.fire({
         icon: 'success',

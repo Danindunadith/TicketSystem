@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import axiosInstance from '../../config/axiosConfig';
 import { jwtDecode } from "jwt-decode";
 
 export default function UserTicketReplies() {
@@ -34,11 +34,16 @@ export default function UserTicketReplies() {
 
         setLoading(true);
         console.log("🔄 Fetching replies for user:", userId);
-        
-        axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/reticket/replyticket`)
+        axiosInstance.get(`/api/reticket/replyticket`)
             .then(res => {
-                console.log("✅ All replies fetched:", res.data);
-                setReplies(res.data);
+                console.log("✅ All replies fetched (raw):", res.data);
+                if (Array.isArray(res.data)) {
+                    setReplies(res.data);
+                } else if (res.data && Array.isArray(res.data.replies)) {
+                    setReplies(res.data.replies);
+                } else {
+                    setReplies([]);
+                }
             })
             .catch(err => {
                 console.error("❌ Error fetching replies:", err);
@@ -49,22 +54,24 @@ export default function UserTicketReplies() {
 
     // 2. For each reply, fetch the ticket and check if userId matches
     useEffect(() => {
-        if (replies.length === 0 || !userId) return;
-        
+        if (!Array.isArray(replies) || replies.length === 0 || !userId) {
+            if (Array.isArray(replies) && replies.length === 0) {
+                console.warn("No replies found for this user.");
+            }
+            return;
+        }
         setFetchingTickets(true);
         console.log("🔄 Fetching tickets for", replies.length, "replies");
-        
         Promise.all(
             replies.map(reply =>
-                axios
-                    .get(`${import.meta.env.VITE_BACKEND_URL}/api/tickets/${reply.ticketId}`)
+                axiosInstance
+                    .get(`/api/tickets/${reply.ticketId}`)
                     .then(res => {
                         const ticket = res.data;
-                        console.log("✅ Fetched ticket:", ticket._id);
+                        console.log("✅ Fetched ticket:", ticket._id, ticket);
                         console.log(`Ticket ${reply.ticketId} userId: ${ticket.userId || 'not set'}, Current user: ${userId}`);
-                        
-                        // Only include if ticket's userId matches current user's userId
-                        if (ticket.userId === userId) {
+                        // Only include if ticket's userId matches current user's userId (as string)
+                        if (String(ticket.userId) === String(userId)) {
                             return {
                                 ...reply,
                                 statement: ticket.statement,
@@ -84,14 +91,15 @@ export default function UserTicketReplies() {
         ).then(repliesWithStatements => {
             // Filter out null values (non-matching tickets)
             const filteredTickets = repliesWithStatements.filter(ticket => ticket !== null);
-            
+            if (filteredTickets.length === 0) {
+                console.warn("No replies matched the user's tickets. Check ticket.userId and reply.ticketId in your database.");
+            }
             // Sort by reply creation date - newest first
             const sortedTickets = filteredTickets.sort((a, b) => {
                 const dateA = new Date(a.createdAt);
                 const dateB = new Date(b.createdAt);
                 return dateB - dateA; // Newest first (descending order)
             });
-            
             console.log("✅ Filtered and sorted tickets for user:", sortedTickets);
             setTickets(sortedTickets);
         }).finally(() => {

@@ -1,4 +1,4 @@
-import axios from "axios";
+import axiosInstance from '../../config/axiosConfig';
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -33,7 +33,7 @@ export default function Profile() {
             return;
         }
 
-        axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/users/${userEmail}`, {
+        axiosInstance.get(`/api/users/${userEmail}`, {
             headers: { Authorization: `Bearer ${token}` },
         })
         .then((res) => {
@@ -75,7 +75,7 @@ export default function Profile() {
     const fetchUserTickets = async (email) => {
         setTicketsLoading(true);
         try {
-            const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/tickets/email/${encodeURIComponent(email)}`);
+            const response = await axiosInstance.get(`/api/tickets/email/${encodeURIComponent(email)}`);
             setUserTickets(response.data);
         } catch (error) {
             console.error("Error fetching user tickets:", error);
@@ -105,8 +105,8 @@ export default function Profile() {
                 return;
             }
 
-            const response = await axios.put(
-                `${import.meta.env.VITE_BACKEND_URL}/api/users/${user.email}`,
+            const response = await axiosInstance.put(
+                `/api/users/${user.email}`,
                 formData,
                 {
                     headers: { Authorization: `Bearer ${token}` }
