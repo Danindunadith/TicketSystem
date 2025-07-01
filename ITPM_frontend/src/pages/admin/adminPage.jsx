@@ -96,18 +96,7 @@ export default function AdminPage() {
           <div>
             <p className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-4">Other Sections</p>
             
-            <Link to="/admin/employee" className={`flex items-center px-4 py-4 rounded-xl transition-all duration-300 group ${
-              isActive('/admin/employee') 
-                ? 'bg-white/20 text-white shadow-lg backdrop-blur-sm border border-white/30' 
-                : 'text-white/80 hover:bg-white/10 hover:text-white hover:shadow-md'
-            }`}>
-              <MdWorkOutline className={`text-2xl transition-all duration-300 ${
-                isActive('/admin/employee') 
-                  ? 'text-white' 
-                  : 'text-white/70 group-hover:text-white'
-              }`} />
-              <span className="ml-4 font-semibold text-base">Employee Management</span>
-            </Link>
+            
             
             <Link to="/admin/users" className={`flex items-center px-4 py-4 rounded-xl transition-all duration-300 group ${
               isActive('/admin/users') 
