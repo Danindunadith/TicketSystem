@@ -1,4 +1,4 @@
-import axios from "axios";
+import axiosInstance from '../../config/axiosConfig';
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -14,7 +14,7 @@ export default function Profile() {
         phone: "",
         address: ""
     });
-    const [userTickets, setUserTickets] = useState([]);
+    const [userTickets, setUserTickets] = useState([]); // Initialize as empty array
     const [ticketsLoading, setTicketsLoading] = useState(true);
     const navigate = useNavigate();
 
@@ -33,7 +33,7 @@ export default function Profile() {
             return;
         }
 
-        axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/users/${userEmail}`, {
+        axiosInstance.get(`/api/users/${userEmail}`, {
             headers: { Authorization: `Bearer ${token}` },
         })
         .then((res) => {
@@ -75,14 +75,32 @@ export default function Profile() {
     const fetchUserTickets = async (email) => {
         setTicketsLoading(true);
         try {
-            const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/tickets/email/${encodeURIComponent(email)}`);
-            setUserTickets(response.data);
-        } catch (error) {
-            console.error("Error fetching user tickets:", error);
-            if (error.response?.status !== 404) {
-                toast.error("Could not load your tickets.");
+            console.log("🔄 Fetching tickets for email:", email);
+            const response = await axiosInstance.get(`/api/tickets/by-email/${encodeURIComponent(email)}`);
+            console.log("✅ Tickets response:", response.data);
+            
+            // Ensure we always set an array
+            if (Array.isArray(response.data)) {
+                setUserTickets(response.data);
+            } else if (response.data && Array.isArray(response.data.tickets)) {
+                // Handle case where tickets are nested
+                setUserTickets(response.data.tickets);
+            } else if (response.data && typeof response.data === 'object') {
+                // Handle case where single ticket is returned
+                setUserTickets([response.data]);
+            } else {
+                console.warn("⚠️ Unexpected response format:", response.data);
+                setUserTickets([]);
             }
-            setUserTickets([]);
+        } catch (error) {
+            console.error("❌ Error fetching user tickets:", error);
+            if (error.response?.status === 404) {
+                console.log("📝 No tickets found for user");
+                setUserTickets([]); // Set empty array for 404
+            } else {
+                toast.error("Could not load your tickets.");
+                setUserTickets([]); // Set empty array on other errors
+            }
         } finally {
             setTicketsLoading(false);
         }
@@ -105,8 +123,8 @@ export default function Profile() {
                 return;
             }
 
-            const response = await axios.put(
-                `${import.meta.env.VITE_BACKEND_URL}/api/users/${user.email}`,
+            const response = await axiosInstance.put(
+                `/api/users/${user.email}`,
                 formData,
                 {
                     headers: { Authorization: `Bearer ${token}` }
@@ -137,6 +155,7 @@ export default function Profile() {
         switch (priority?.toLowerCase()) {
             case 'high':
             case 'urgent':
+            case 'critical':
                 return 'bg-red-100 text-red-800 border-red-200';
             case 'medium':
                 return 'bg-yellow-100 text-yellow-800 border-yellow-200';
@@ -148,27 +167,45 @@ export default function Profile() {
     };
 
     const formatDate = (dateString) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
+        if (!dateString) return 'N/A';
+        try {
+            return new Date(dateString).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        } catch (error) {
+            console.error('Date formatting error:', error);
+            return 'Invalid Date';
+        }
     };
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="w-16 h-16 border-4 border-b-blue-500 border-t-blue-200 rounded-full animate-spin"></div>
+            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+                <div className="text-center">
+                    <div className="w-16 h-16 border-4 border-b-blue-500 border-t-blue-200 rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading your profile...</p>
+                </div>
             </div>
         );
     }
 
     if (!user) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <h2 className="text-2xl font-bold text-gray-800">Profile not found</h2>
-                    <p className="text-gray-600">Please try logging in again</p>
+            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-red-100">
+                <div className="text-center bg-white p-8 rounded-2xl shadow-xl">
+                    <svg className="w-16 h-16 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <h2 className="text-2xl font-bold text-gray-800 mb-2">Profile not found</h2>
+                    <p className="text-gray-600 mb-4">Please try logging in again</p>
+                    <button
+                        onClick={() => navigate("/login")}
+                        className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                    >
+                        Go to Login
+                    </button>
                 </div>
             </div>
         );
@@ -311,8 +348,9 @@ export default function Profile() {
                                 {ticketsLoading ? (
                                     <div className="flex justify-center items-center py-8">
                                         <div className="w-8 h-8 border-2 border-b-green-500 border-t-green-200 rounded-full animate-spin"></div>
+                                        <span className="ml-2 text-gray-600">Loading tickets...</span>
                                     </div>
-                                ) : userTickets.length === 0 ? (
+                                ) : !Array.isArray(userTickets) || userTickets.length === 0 ? (
                                     <div className="text-center py-8">
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -322,22 +360,36 @@ export default function Profile() {
                                     </div>
                                 ) : (
                                     <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
-                                        {userTickets.map((ticket) => (
-                                            <div key={ticket._id} className="border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/oneticket/${ticket._id}`)}>
+                                        {userTickets.map((ticket, index) => (
+                                            <div 
+                                                key={ticket._id || ticket.id || index} 
+                                                className="border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow cursor-pointer hover:bg-gray-50" 
+                                                onClick={() => navigate(`/oneticket/${ticket._id || ticket.id}`)}
+                                            >
                                                 <div className="flex items-start justify-between mb-2">
-                                                    <h4 className="font-semibold text-sm text-gray-800 line-clamp-2">
-                                                        {ticket.subject}
+                                                    <h4 className="font-semibold text-sm text-gray-800 line-clamp-2 flex-grow pr-2">
+                                                        {ticket.subject || 'No Subject'}
                                                     </h4>
-                                                    <span className={`px-2 py-1 text-xs rounded-full border ${getPriorityColor(ticket.priority)}`}>
-                                                        {ticket.priority}
+                                                    <span className={`px-2 py-1 text-xs rounded-full border flex-shrink-0 ${getPriorityColor(ticket.priority)}`}>
+                                                        {ticket.priority || 'N/A'}
                                                     </span>
                                                 </div>
                                                 <p className="text-xs text-gray-600 mb-2 line-clamp-2">
-                                                    {ticket.statement}
+                                                    {ticket.statement || 'No description available'}
                                                 </p>
                                                 <div className="flex items-center justify-between text-xs text-gray-500">
-                                                    <span>{ticket.department}</span>
-                                                    <span>{formatDate(ticket.date)}</span>
+                                                    <span className="flex items-center">
+                                                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                                        </svg>
+                                                        {ticket.department || 'N/A'}
+                                                    </span>
+                                                    <span className="flex items-center">
+                                                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a1 1 0 011-1h6a1 1 0 011 1v4m-9 4h14l-1 9H8l-1-9z" />
+                                                        </svg>
+                                                        {formatDate(ticket.date || ticket.createdAt)}
+                                                    </span>
                                                 </div>
                                             </div>
                                         ))}
@@ -362,4 +414,4 @@ export default function Profile() {
             </div>
         </div>
     );
-} 
+}

@@ -1,4 +1,4 @@
-import axios from "axios";
+import axiosInstance from '../../config/axiosConfig';
 import { useEffect, useState } from "react";
 import { CiCirclePlus } from "react-icons/ci";
 import { Link, useNavigate } from "react-router-dom";
@@ -15,7 +15,7 @@ export default function AdminItemsPage() {
 
     if(!itemsloaded){
     const token = localStorage.getItem("token");
-    axios
+    axiosInstance
       .get(`${import.meta.env.VITE_BACKEND_URL}/api/products`, {
         headers: { Authorization: `Bearer ${token}` },
       })
@@ -36,7 +36,7 @@ export default function AdminItemsPage() {
     setItems(items.filter((item) => item.key !== key));
     const token = localStorage.getItem("token");
 
-    axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/products/${key}`,{
+    axiosInstance.delete(`${import.meta.env.VITE_BACKEND_URL}/api/products/${key}`,{
       headers : {Authorization: `Bearer ${token}`},
     
     }).then((res)=>{

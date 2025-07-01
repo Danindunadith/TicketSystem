@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import axios from "axios";
+import axiosInstance from '../../config/axiosConfig';
 import toast from "react-hot-toast";
 import "./Employee.css";
 
@@ -12,7 +12,7 @@ const Employee = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      const response = await axios.get("http://localhost:3002/api/employee/getallemp");
+      const response = await axiosInstance.get("employee/getallemp");
       setEmployees(response.data);
       setFilteredEmployees(response.data); // Initially, all products are displayed
     };
@@ -34,7 +34,7 @@ const Employee = () => {
 
 
   const deleteEmployee = async (employeeId) => {
-    await axios.delete(`http://localhost:3002/api/employee/deleteemp/${employeeId}`)
+    await axiosInstance.delete(`employee/deleteemp/${employeeId}`)
       .then((response) => {
         setEmployees((prevEmployees) => prevEmployees.filter((employee) => employee._id !== employeeId));
         toast.success(response.data.msg, { position: 'top-right' });

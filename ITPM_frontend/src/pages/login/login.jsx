@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import axiosInstance from '../../config/axiosConfig';
 import toast from "react-hot-toast";
 
 export default function LoginPage() {
@@ -25,7 +25,7 @@ export default function LoginPage() {
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
     try {
-      const res = await axios.post(`${backendUrl}/api/users/login`, {
+      const res = await axiosInstance.post(`${backendUrl}/api/users/login`, {
         email: formData.email,
         password: formData.password
       });

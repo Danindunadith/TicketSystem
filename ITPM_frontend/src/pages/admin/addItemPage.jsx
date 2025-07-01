@@ -1,4 +1,4 @@
-import axios from "axios";
+import axiosInstance from '../../config/axiosConfig';
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
@@ -50,7 +50,7 @@ export default function AddItemPage() {
 
     const imageUrls = await Promise.all(promises);  //async awit methode (get image urls)
     
-      const result= await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/products`,{
+      const result= await axiosInstance.post(`${import.meta.env.VITE_BACKEND_URL}/api/products`,{
             key:productKey,
             name:productName,
             price:productPrice,

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import axiosInstance from '../../config/axiosConfig';
 import toast from "react-hot-toast";
 import {jwtDecode} from "jwt-decode";
 import '@emailjs/browser';
@@ -113,7 +113,7 @@ export default function CreateTicketPage() {
       const fullMessage = `${formData.subject}. ${formData.statement}`;
 
       // Run comprehensive AI analysis using the new endpoint
-      const analysisResponse = await axios.post(`http://localhost:3002/api/ai/analyze-ticket`, {
+      const analysisResponse = await axiosInstance.post('/api/ai/analyze-ticket', {
         title: formData.subject,
         description: formData.statement,
         priority: formData.priority
@@ -175,13 +175,13 @@ export default function CreateTicketPage() {
       // Fallback to original analysis endpoints
       try {
         const [sentimentResponse, categoryResponse] = await Promise.all([
-          axios.post(`http://localhost:3002/api/analysis/sentiment`, {
+          axiosInstance.post('/api/analysis/sentiment', {
             subject: formData.subject,
             department: formData.department,
             relatedService: formData.relatedservice,
             description: formData.statement
           }),
-          axios.post(`http://localhost:3002/api/ai/predict-category`, {
+          axiosInstance.post('/api/ai/predict-category', {
             subject: formData.subject,
             description: formData.statement,
             department: formData.department
@@ -328,7 +328,7 @@ export default function CreateTicketPage() {
       console.warn("⚠️ No token found in localStorage");
     }
 
-    const apiUrl = "http://localhost:3002/api/tickets/";
+    const apiUrl = "/api/tickets/";
     console.log("Sending POST request to:", apiUrl);
 
     try {
@@ -337,7 +337,7 @@ export default function CreateTicketPage() {
       if (formData.subject && formData.statement) {
         console.log("Running AI analysis before ticket submission...");
         try {
-          const analysisResponse = await axios.post(`http://localhost:3002/api/ai/analyze-ticket`, {
+          const analysisResponse = await axiosInstance.post('/api/ai/analyze-ticket', {
             title: formData.subject,
             description: formData.statement,
             priority: formData.priority
@@ -472,7 +472,7 @@ export default function CreateTicketPage() {
         });
       }
 
-      const response = await axios.post(apiUrl, formDataToSend, {
+      const response = await axiosInstance.post(apiUrl, formDataToSend, {
         headers: {
           "Content-Type": "multipart/form-data"
         }

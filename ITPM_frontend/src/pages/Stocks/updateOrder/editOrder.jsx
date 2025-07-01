@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import "../placeOrder/addOrder.css";
 import { useState } from "react";
-import axios from "axios";
+import axiosInstance from '../../../config/axiosConfig';
 
 const EditOrder = () => {
   const orders = {
@@ -60,7 +60,7 @@ const EditOrder = () => {
         },
       };
       console.log(id);
-      await axios
+      await axiosInstance
         .post(
           `http://localhost:3500/api/stock/update`,
           {

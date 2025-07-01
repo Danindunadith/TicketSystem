@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import axios from "axios";
+import axiosInstance from '../../../config/axiosConfig';
 import toast from "react-hot-toast";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
@@ -14,7 +14,7 @@ const People = () => {
     const fetchData = async () => {
         try {
             setIsLoading(true);
-            const response = await axios.get("http://localhost:3002/api/peoples/getallpeople");
+            const response = await axiosInstance.get("/peoples/getallpeople");
             console.log("Fetched data:", response.data); // Debug log
             setPeople(response.data);
         } catch (error) {
@@ -37,7 +37,7 @@ const People = () => {
 
         try {
             console.log("Deleting user with ID:", peopleId);
-            const response = await axios.delete(`http://localhost:3002/api/peoples/deletepeo/${peopleId}`);
+            const response = await axiosInstance.delete(`/peoples/deletepeo/${peopleId}`);
             console.log("Delete response:", response.data);
             
             if (response.data.msg) {

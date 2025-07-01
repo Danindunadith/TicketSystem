@@ -1,4 +1,4 @@
-import axios from "axios"
+import axiosInstance from '../../config/axiosConfig';
 import { useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import ProductCard from "../../components/productCard"
@@ -9,7 +9,7 @@ export default function Items(){
 
     useEffect(()=>{
         if(state == "loading"){
-            axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/products`).then((res)=>{
+            axiosInstance.get(`${import.meta.env.VITE_BACKEND_URL}/api/products`).then((res)=>{
                 console.log(res.data)
                 setItems(res.data)
                 setState("success")

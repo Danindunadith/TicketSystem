@@ -1,4 +1,4 @@
-import axios from "axios";
+import axiosInstance from '../../config/axiosConfig';
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
@@ -11,7 +11,7 @@ export default function Users() {
     useEffect(() => {
         if(!usersloaded){
             const token = localStorage.getItem("token");
-            axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/users`, {
+            axiosInstance.get(`/api/users`, {
                 headers: { Authorization: `Bearer ${token}` },
             })
             .then((res) => {
@@ -30,7 +30,7 @@ export default function Users() {
     const handleDelete = (email) => {
         if(window.confirm("Are you sure You want to delete this user ?")){
             const token = localStorage.getItem("token");
-            axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/users/${email}`, {
+            axiosInstance.delete(`/api/users/${email}`, {
                 headers: { Authorization: `Bearer ${token}` },
             })
             .then((res) => {

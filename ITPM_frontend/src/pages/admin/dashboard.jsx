@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import axiosInstance from '../../config/axiosConfig';
 import { FaTicketAlt, FaUsers, FaRegCalendarAlt, FaChartLine } from 'react-icons/fa';
 import { MdEventAvailable, MdOutlineLocalMovies, MdMusicNote, MdSportsSoccer } from 'react-icons/md';
 import TicketDepartmentChart from './TicketDepartmentChart'; // Adjust the import path as necessary
@@ -19,7 +19,7 @@ export default function Dashboard() {
     const fetchBookings = async () => {
       try {
         setLoadingBookings(true);
-        const response = await axios.get('http://localhost:3002/api/tickets');
+        const response = await axiosInstance.get('/api/tickets');
         // Map your API data to the table structure
         const bookings = response.data.map(ticket => ({
           id: ticket.id || ticket._id || 'N/A',
@@ -43,7 +43,7 @@ export default function Dashboard() {
     const fetchConcerns = async () => {
       try {
         setLoadingConcerns(true);
-        const response = await axios.get('http://localhost:3002/api/tickets');
+        const response = await axiosInstance.get('/api/tickets');
         const highPriority = response.data
           .filter(ticket => ticket.priority === 'High')
           .map(ticket => ({
@@ -64,7 +64,7 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-  axios.get('http://localhost:3002/api/users/user/count')
+  axiosInstance.get('/api/users/user/count')
     .then(res => setUserCount(res.data.count))
     .catch(() => setUserCount(0));
 }, []);
@@ -72,7 +72,7 @@ export default function Dashboard() {
 /**http://localhost:3002/api/employee/count */
 
   useEffect(() => {
-  axios.get('http://localhost:3002/api/employee/count')
+  axiosInstance.get('/api/employee/count')
     .then(res => setEmpCount(res.data.count))
     .catch(() => setEmpCount(0));
 }, []);

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import axiosInstance from '../../config/axiosConfig';
 import toast from "react-hot-toast";
 
 export default function RegisterPage() {
@@ -28,7 +28,7 @@ export default function RegisterPage() {
     setLoading(true);
     
     try {
-      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/users/`, {
+      await axiosInstance.post(`/api/users/`, {
         email: formData.email,
         firstName: formData.firstName,
         lastName: formData.lastName,
